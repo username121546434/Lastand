@@ -208,6 +208,8 @@ int main(int argv, char **argc) {
             case ENET_EVENT_TYPE_DISCONNECT:
                 std::cout << "Disconnet event received" << std::endl;
                 break;
+            default:
+                break;
         }
     }
 

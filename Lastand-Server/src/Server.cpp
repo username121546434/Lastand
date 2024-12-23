@@ -13,7 +13,7 @@
 
 int players_connected {0};
 const int max_players = 100;
-const Player default_player {0, 0, {0, 0, 0, 255}, "Player", 0};
+const Player default_player {0, 0, {255, 255, 255, 255}, "Player", 0};
 
 struct ClientData {
     Player p;
@@ -130,11 +130,14 @@ int main(int argv, char **argc) {
                 parse_event(event);
                 break;
             }
-            case ENET_EVENT_TYPE_DISCONNECT:
+            case ENET_EVENT_TYPE_DISCONNECT: {
                 std::cout << event.peer->address.host << ':' << event.peer->address.port << " disconnected." << std::endl;
                 players_connected--;
                 ClientData *c = static_cast<ClientData *>(event.peer->data);
                 players.erase(players.find(c->p.id));
+                break;
+            }
+            case ENET_EVENT_TYPE_NONE:
                 break;
         }
         auto now = std::chrono::high_resolution_clock::now();
