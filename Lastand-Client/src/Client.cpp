@@ -9,7 +9,7 @@
 #include "serialize.h"
 
 void draw_player(SDL_Renderer *renderer, const Player &p) {
-    SDL_FRect frect {static_cast<float>(p.x / 10.0), static_cast<float>(p.y / 10.0), player_size, player_size};
+    SDL_FRect frect {static_cast<float>(p.x / 2.0), static_cast<float>(p.y / 2.0), player_size, player_size};
     bool success;
     success = SDL_SetRenderDrawColor(renderer, p.color.r, p.color.g, p.color.g, p.color.a);
     if (!success) std::cerr << "Error in SDL_SetRenderDrawColor: " << SDL_GetError();
