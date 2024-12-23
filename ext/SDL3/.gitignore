@@ -29,8 +29,3 @@ test/
 # Ignore platform-specific protocols
 wayland-protocols/
 
-# Optional: Ignore cmake directory if not used
-cmake/
-
-include/build_config/
-
