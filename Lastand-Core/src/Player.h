@@ -12,7 +12,9 @@ struct Player {
     Color color;
     std::string username;
 public:
-    Player() = delete;
+    Player(uint16_t x, uint16_t y, Color color, const std::string &username): 
+        x {x}, y {y}, color {color}, username {username} {};
+    Player(): Player {0, 0, Color {}, "Player"} {};
     void move(std::pair<short, short> delta);
 };
 
