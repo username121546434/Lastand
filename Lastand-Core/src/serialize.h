@@ -1,7 +1,9 @@
 #pragma once
-#include <cstdint>
+#include <vector>
 #ifndef SERIALIZE_H
 #define SERIALIZE_H
+#include <cstdint>
+#include "Player.h"
 
 enum class MessageToServerTypes: uint8_t {
     ClientMove = 0, // input from player to go up, down, left, right
@@ -26,5 +28,10 @@ enum class ClientMovement: uint8_t {
     DownRight = Down | Right,
     DownLeft = Down | Left,
 };
+
+std::vector<uint8_t> serialize_player(const Player &player);
+Player deserialize_player(const std::vector<uint8_t> &data);
+
+void update_player_delta(ClientMovement movement, bool key_up, std::pair<short, short> &player_delta);
 
 #endif

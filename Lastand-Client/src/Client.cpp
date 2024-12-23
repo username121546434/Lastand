@@ -48,28 +48,6 @@ ClientMovement create_client_movement(SDL_Scancode key) {
     return m;
 }
 
-void update_player_delta(ClientMovement movement, bool key_up, std::pair<short, short> &player_delta) {
-    auto m = static_cast<uint8_t>(movement);
-    if (!key_up) {
-        // key is currently being held down
-        if (m & (uint8_t)ClientMovement::Left)
-            player_delta.first = -1;
-        else if (m & (uint8_t)ClientMovement::Right)
-            player_delta.first = 1;
-        
-        if (m & (uint8_t)ClientMovement::Up)
-            player_delta.second = -1;
-        else if (m & (uint8_t)ClientMovement::Down)
-            player_delta.second = 1;
-    } else {
-        if (m & (uint8_t)ClientMovement::Right || m & (uint8_t)ClientMovement::Left)
-            player_delta.first = 0;
-
-        if (m & (uint8_t)ClientMovement::Up || m & (uint8_t)ClientMovement::Down)
-            player_delta.second = 0;
-    }
-}
-
 std::vector<uint8_t> handle_key_down(SDL_Scancode key, std::pair<short, short> &player_delta) {
     auto movement = create_client_movement(key);
     std::vector<uint8_t> msg {
@@ -178,7 +156,7 @@ int main(int argv, char **argc) {
         std::cout << "Connection to " << server_addr << ":" << address.port << " failed" << std::endl;
     }
 
-    Player player {100, 100, {100, 200, 0, 0}, "testing..."};
+    Player player {100, 100, {100, 200, 0, 0}, "testing...", 0};
     std::pair<short, short> player_movement;
     Uint32 lastTime = SDL_GetTicks();
 
