@@ -1,0 +1,36 @@
+# Ignore development and config files
+.clang-tidy
+.editorconfig
+.git-hash
+.wikiheaders-options
+
+# Ignore build system files for unused platforms/tools
+VisualC-GDK/
+VisualC/
+Xcode/
+android-project/
+
+# Ignore documentation and metadata
+BUGS.txt
+CREDITS.md
+INSTALL.md
+README*
+REVISION.txt
+WhatsNew.txt
+
+# Ignore build scripts/tools
+Android.mk
+build-scripts/
+
+# Ignore examples and tests
+examples/
+test/
+
+# Ignore platform-specific protocols
+wayland-protocols/
+
+# Optional: Ignore cmake directory if not used
+cmake/
+
+include/build_config/
+

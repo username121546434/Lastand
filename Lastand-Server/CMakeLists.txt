@@ -13,6 +13,11 @@ target_include_directories(Lastand-Server PRIVATE
 # Link libraries
 target_link_libraries(Lastand-Server PRIVATE Lastand-Core enet)
 
-# Link GameNetworkingSockets
+if(MSVC)
+    target_link_libraries(Lastand-Server PRIVATE ws2_32 winmm)
+endif()
+
+
+# Link enet
 target_link_directories(Lastand-Server PRIVATE ../ext/ENet/lib)
 
