@@ -1,5 +1,6 @@
 #include <SDL3/SDL.h>
 #include "Player.h"
+#include <cstdint>
 #include <iostream>
 #include <SDL3/SDL_main.h>
 #include "SDL3/SDL_scancode.h"
@@ -7,6 +8,7 @@
 #include <enet/enet.h>
 #include <vector>
 #include "serialize.h"
+#include <map>
 
 void draw_player(SDL_Renderer *renderer, const Player &p) {
     SDL_FRect frect {static_cast<float>(p.x / 2.0), static_cast<float>(p.y / 2.0), player_size, player_size};
@@ -19,8 +21,9 @@ void draw_player(SDL_Renderer *renderer, const Player &p) {
 
 const std::string window_title {"Lastand Client"};
 
-void draw_frame(SDL_Renderer *renderer, const Player &player) {
-    draw_player(renderer, player);
+void draw_frame(SDL_Renderer *renderer, const std::vector<Player> &players) {
+    for (const auto &player: players)
+        draw_player(renderer, player);
 }
 
 ClientMovement create_client_movement(SDL_Scancode key) {
@@ -81,8 +84,28 @@ std::vector<uint8_t> process_event(const SDL_Event &event, std::pair<short, shor
     }
 }
 
-void run_game_tick(Player &player, std::pair<short, short> player_delta) {
-    player.move(player_delta);
+void parse_message_from_server(const std::vector<uint8_t> &data, std::map<int, Player> &player_data) {
+    MessageToClientTypes type {data[0]};
+    std::vector<uint8_t> data_without_type {data.begin() + 1, data.end()};
+    switch (type) {
+        case MessageToClientTypes::UpdatePlayerPositions: {
+            std::cout << "update player positions" << std::endl;
+            deserialize_and_update_game_player_positions(data_without_type, player_data);
+            break;
+        }
+        case MessageToClientTypes::PlayerJoined: {
+            std::cout << "Player joined" << std::endl;
+            Player p {deserialize_player(data_without_type)};
+            player_data[p.id] = p;
+            break;
+        }
+        case MessageToClientTypes::PlayerLeft: {
+            int id {data_without_type[0]};
+            std::cout << "Player " << id << " left" << std::endl;
+            player_data.erase(id);
+            break;
+        }
+    }
 }
 
 template <typename T>
@@ -155,10 +178,29 @@ int main(int argv, char **argc) {
         enet_peer_reset(server);
         std::cout << "Connection to " << server_addr << ":" << address.port << " failed" << std::endl;
     }
+    int err = enet_host_service(client, &enet_event, 500);
+    if (err < 0) {
+        std::cerr << "Failed to get player data: " << err << std::endl;
+        return 1;
+    }
+    Player this_player;
+    if (enet_event.type == ENET_EVENT_TYPE_RECEIVE) {
+        std::vector<uint8_t> vec(enet_event.packet->data + 1, enet_event.packet->data + enet_event.packet->dataLength);
+        this_player = deserialize_player(vec);
+        std::cout << "Received player: " << this_player.username << ", ("
+                  << this_player.x << ", " << this_player.y << "), (" << (int)this_player.color.r << ','
+                  << (int)this_player.color.g << ',' << (int)this_player.color.b << ',' << (int)this_player.color.a << "):"
+                  << (int)this_player.id << std::endl;
+    } else {
+        std::cerr << "Did not receive player data: " << enet_event.type << std::endl;
+        return 1;
+    }
 
-    Player player {100, 100, {100, 200, 0, 0}, "testing...", 0};
     std::pair<short, short> player_movement;
     Uint32 lastTime = SDL_GetTicks();
+
+    std::map<int, Player> players;
+    players[this_player.id] = this_player;
 
     bool running = true;
     SDL_Event event;
@@ -174,12 +216,16 @@ int main(int argv, char **argc) {
         }
 
         while (enet_host_service(client, &enet_event, tick_rate_ms) > 0) {
-            switch (event.type) {
-                case ENET_EVENT_TYPE_RECEIVE:
-                    std::string data;
+            switch (enet_event.type) {
+                case ENET_EVENT_TYPE_RECEIVE: {
+                    std::vector<uint8_t> data;
                     for (int i {0}; i < enet_event.packet->dataLength; i++)
                         data.push_back(enet_event.packet->data[i]);
-                    std::cout << "Received data: " << data << " on channel: " << enet_event.channelID << std::endl;
+                    std::cout << "Received data: " << data << " on channel: " << (int)enet_event.channelID << std::endl;
+                    parse_message_from_server(data, players);
+                    break;
+                }
+                default:
                     break;
             }
         }
@@ -187,12 +233,8 @@ int main(int argv, char **argc) {
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
 
-        if (SDL_GetTicks() - lastTime >= tick_rate_ms) {
-            run_game_tick(player, player_movement);
-            lastTime = SDL_GetTicks();
-        }
-
-        draw_frame(renderer, player);
+        for (const auto &[id, player] : players)
+            draw_player(renderer, player);
 
         SDL_RenderPresent(renderer);
     }
@@ -200,7 +242,7 @@ int main(int argv, char **argc) {
 
     enet_peer_disconnect(server, 0);
 
-    while (enet_host_service(client, &enet_event, 3000) > 0) {
+    while (enet_host_service(client, &enet_event, 500) > 0) {
         switch (enet_event.type) {
             case ENET_EVENT_TYPE_RECEIVE:
                 enet_packet_destroy(enet_event.packet);

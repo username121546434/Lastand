@@ -1,4 +1,5 @@
 #include <cassert>
+#include <cstdint>
 #include <enet/enet.h>
 #include <iostream>
 #include <ostream>
@@ -115,7 +116,17 @@ int main(int argv, char **argc) {
                 ClientData c {p, {0, 0}};
                 players[new_player_id] = c;
                 event.peer->data = &players.at(new_player_id);
-                send_packet(event.peer, serialize_player(p), channel_user_updates);
+
+                std::vector<uint8_t> broadcast_data = serialize_player(p);
+                broadcast_data.insert(broadcast_data.cbegin(), static_cast<uint8_t>(MessageToClientTypes::PlayerJoined));
+                broadcast_packet(server, broadcast_data, channel_events);
+
+                for (const auto &[id, data] : players) {
+                    std::vector<uint8_t> send_data = serialize_player(data.p);
+                    send_data.insert(send_data.cbegin(), static_cast<uint8_t>(MessageToClientTypes::PlayerJoined));
+                    broadcast_packet(server, send_data, channel_events);
+                }
+
                 new_player_id++;
                 break;
             }
@@ -134,7 +145,10 @@ int main(int argv, char **argc) {
                 std::cout << event.peer->address.host << ':' << event.peer->address.port << " disconnected." << std::endl;
                 players_connected--;
                 ClientData *c = static_cast<ClientData *>(event.peer->data);
+                std::vector<uint8_t> broadcast_data {static_cast<uint8_t>(MessageToClientTypes::PlayerLeft), c->p.id};
                 players.erase(players.find(c->p.id));
+
+                broadcast_packet(server, broadcast_data, channel_events);
                 break;
             }
             case ENET_EVENT_TYPE_NONE:
@@ -144,6 +158,20 @@ int main(int argv, char **argc) {
         auto elapsed_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_time).count();
         if (elapsed_time_ms >= tick_rate_ms) {
             run_game_tick(players);
+
+            std::vector<Player> players_to_update;
+            players_to_update.reserve(players.size());
+            for (const auto &[id, player_data]: players) {
+                if (player_data.player_movement == std::make_pair<short, short>(0, 0))
+                    continue;
+                players_to_update.push_back(player_data.p);
+            }
+
+            if (players_to_update.empty())
+                continue;
+            std::vector<uint8_t> data_to_send {serialize_game_player_positions(players_to_update)};
+            data_to_send.insert(data_to_send.cbegin(), static_cast<uint8_t>(MessageToClientTypes::UpdatePlayerPositions));
+            broadcast_packet(server, data_to_send, channel_updates);
         }
     }
 

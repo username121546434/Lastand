@@ -76,7 +76,7 @@ std::vector<uint8_t> serialize_player(const Player &player) {
 
 Player deserialize_player(const std::vector<uint8_t> &data) {
     if (data.size() <= 10) {
-        std::cerr << "Not enough data to deserialize a player, data:" << data << std::endl;
+        std::cerr << "Not enough data to deserialize a player, data: " << data << std::endl;
         throw std::runtime_error("Not enough data to deserialize a player");
     }
 
@@ -86,12 +86,11 @@ Player deserialize_player(const std::vector<uint8_t> &data) {
     p.x = x;
     p.y = y;
 
-
     p.color = {data[5], data[6], data[7], data[8]};
     
     uint8_t username_length = data[9];
-    if (username_length + 9 != data.size()) {
-        std::cerr << "Warning: Username length mismatch: " << username_length << " vs " << data.size() << std::endl;
+    if (username_length + 9 != data.size() - 1) {
+        std::cerr << "Warning: Username length mismatch: " << (int)username_length + 9 << " vs " << data.size() - 1 << std::endl;
     }
     std::string username;
     for (size_t i {10}; i < data.size(); i++) {
@@ -120,6 +119,43 @@ void update_player_delta(ClientMovement movement, bool key_up, std::pair<short, 
 
         if (m & (uint8_t)ClientMovement::Up || m & (uint8_t)ClientMovement::Down)
             player_delta.second = 0;
+    }
+}
+
+// takes in a vector of players that were updated by the server and serializes them
+std::vector<uint8_t> serialize_game_player_positions(const std::vector<Player> &players) {
+    std::vector<uint8_t> result;
+    result.reserve(players.size() * 5 + 1);
+    if (players.size() > 255) {
+        std::cerr << "Player vector too big to serialize!" << players.size() << std::endl;
+        return {};
+    }
+    result.push_back(static_cast<uint8_t>(players.size()));
+    for (const auto &p: players) {
+        result.push_back(p.id);
+        auto coordinates {serialize_coordinates(p.x, p.y)};
+        for (auto c : coordinates) {
+            result.push_back(c);
+        }
+    }
+    return result;
+}
+
+void deserialize_and_update_game_player_positions(const std::vector<uint8_t> &data, std::map<int, Player> &players) {
+    if (data.size() < 1) return;
+    uint8_t num_players = data[0];
+    if (data.size() != num_players * 5 + 1) {
+        std::cerr << "Not enough data to deserialize players, data:" << data << std::endl;
+        return;
+    }
+
+    for (size_t curr_player = 1; curr_player <= data.size() - 5; curr_player += 5) {
+        int id = data[curr_player];
+        auto &p = players[id];
+        uint16_t x = deserialize_uint16(data[curr_player + 1], data[curr_player + 2]);
+        uint16_t y = deserialize_uint16(data[curr_player + 3], data[curr_player + 4]);
+        p.x = x;
+        p.y = y;
     }
 }
 
