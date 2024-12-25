@@ -234,6 +234,11 @@ int main(int argv, char **argc) {
 
     players[this_player.id] = this_player;
 
+    for (const auto &o : obstacles) {
+        std::cout << "Received obstacle at: (" << o.x << ", " << o.y << ") (" << o.width << ", " << o.height << ")"
+            << "(" << (int)o.color.r << ", " << (int)o.color.g << ", " << (int)o.color.b << ", " << (int)o.color.a << ")" << std::endl;
+    }
+
     bool running = true;
     SDL_Event event;
     while (running) {

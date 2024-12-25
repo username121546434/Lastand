@@ -1,4 +1,5 @@
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <enet/enet.h>
 #include <iostream>
@@ -101,6 +102,13 @@ int main(int argv, char **argc) {
     const std::vector<Obstacle> obstacles {load_from_file("maps/map1.txt")};
     std::cout << "Loaded " << obstacles.size() << " obstacles" << std::endl;
 
+    for (const auto &o : obstacles) {
+        std::cout << "Read obstacle at: (" << o.x << ", " << o.y << ") (" << o.width << ", " << o.height << ")"
+            << "(" << (int)o.color.r << ", " << (int)o.color.g << ", " << (int)o.color.b << ", " << (int)o.color.a << ")" << std::endl;
+        auto data = serialize_obstacle(o);
+        std::cout << "Correct obstacle serialized: " << data << std::endl;
+    }
+
     auto last_time = std::chrono::high_resolution_clock::now();
 
     while (running) {
@@ -133,6 +141,28 @@ int main(int argv, char **argc) {
                     other_players.push_back(data.p);
                 }
                 std::vector<uint8_t> previous_game_data {serialize_previous_game_data(other_players, obstacles)};
+
+                // testing if serializing and deserializing previous game data works
+                auto [p2, o2] = deserialize_and_update_previous_game_data(previous_game_data);
+                if (p2.size() != other_players.size()) {
+                    std::cerr << "slkdjflskdf" << std::endl;
+                }
+                if (o2.size() != obstacles.size()) {
+                    std::cerr << "slkdjflskdf obstacles" << std::endl;
+                }
+                for (size_t i {0}; i < p2.size(); i++) {
+                    auto p1 {other_players[i]};
+                    auto p3 {p2[i]};
+                    if (p1.id != p3.id || p1.username != p3.username || p1.x != p3.x || p1.y != p3.y || p1.color.r != p3.color.r || p1.color.g != p3.color.g || p1.color.b != p3.color.b || p1.color.a != p3.color.a)
+                        std::cerr << "slkdjflskdf player is different " << std::endl;
+                }
+                for (size_t i {0}; i < o2.size(); i++) {
+                    auto o1 {obstacles[i]};
+                    auto o3 {o2[i]};
+                    if (o1.x != o3.x || o1.y != o3.y || o1.width != o3.width || o1.height != o3.height || o1.color.r != o3.color.r || o1.color.g != o3.color.g || o1.color.b != o3.color.b || o1.color.a != o3.color.a)
+                        std::cerr << "slkdjflskdf obstacle is different " << std::endl;
+                }
+
                 previous_game_data.insert(previous_game_data.begin(), static_cast<uint8_t>(MessageToClientTypes::PreviousGameData));
 
                 send_packet(event.peer, previous_game_data, channel_events);
