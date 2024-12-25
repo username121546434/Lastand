@@ -178,7 +178,7 @@ int main(int argv, char **argc) {
         enet_peer_reset(server);
         std::cout << "Connection to " << server_addr << ":" << address.port << " failed" << std::endl;
     }
-    int err = enet_host_service(client, &enet_event, 500);
+    int err = enet_host_service(client, &enet_event, 800);
     if (err < 0) {
         std::cerr << "Failed to get player data: " << err << std::endl;
         return 1;
@@ -186,6 +186,7 @@ int main(int argv, char **argc) {
     Player this_player;
     if (enet_event.type == ENET_EVENT_TYPE_RECEIVE) {
         std::vector<uint8_t> vec(enet_event.packet->data + 1, enet_event.packet->data + enet_event.packet->dataLength);
+        std::cout << "Data received: " << *(int*)enet_event.packet->data << " and " << vec << std::endl;
         this_player = deserialize_player(vec);
         std::cout << "Received player: " << this_player.username << ", ("
                   << this_player.x << ", " << this_player.y << "), (" << (int)this_player.color.r << ','
