@@ -178,6 +178,8 @@ int main(int argv, char **argc) {
         enet_peer_reset(server);
         std::cout << "Connection to " << server_addr << ":" << address.port << " failed" << std::endl;
     }
+
+    // get player data
     int err = enet_host_service(client, &enet_event, 800);
     if (err < 0) {
         std::cerr << "Failed to get player data: " << err << std::endl;
@@ -192,6 +194,22 @@ int main(int argv, char **argc) {
                   << this_player.x << ", " << this_player.y << "), (" << (int)this_player.color.r << ','
                   << (int)this_player.color.g << ',' << (int)this_player.color.b << ',' << (int)this_player.color.a << "):"
                   << (int)this_player.id << std::endl;
+    } else {
+        std::cerr << "Did not receive player data: " << enet_event.type << std::endl;
+        return 1;
+    }
+
+    // get previous game data
+    err = enet_host_service(client, &enet_event, 800);
+    if (err < 0) {
+        std::cerr << "Failed to get player data: " << err << std::endl;
+        return 1;
+    }
+    if (enet_event.type == ENET_EVENT_TYPE_RECEIVE) {
+        std::vector<uint8_t> vec(enet_event.packet->data + 1, enet_event.packet->data + enet_event.packet->dataLength);
+        std::cout << "Data received: " << *(int*)enet_event.packet->data << " and " << vec << std::endl;
+        auto [previous_players, obstacles] = deserialize_and_update_previous_game_data(vec);
+        std::cout << "Received " << previous_players.size() << " player(s) and " << obstacles.size() << " obstacle(s)" << std::endl;
     } else {
         std::cerr << "Did not receive player data: " << enet_event.type << std::endl;
         return 1;
