@@ -1,6 +1,7 @@
 #include "serialize.h"
 #include <array>
 #include <cstdint>
+#include <iterator>
 #include <stdexcept>
 #include <iostream>
 
@@ -80,7 +81,7 @@ Player deserialize_player(const std::vector<uint8_t> &data) {
         throw std::runtime_error("Not enough data to deserialize a player");
     }
 
-    Player p {data[4]};
+    Player p {data[4]}; // data[4] is the player id
     uint16_t x = deserialize_uint16(data[0], data[1]);
     uint16_t y = deserialize_uint16(data[2], data[3]);
     p.x = x;
@@ -255,5 +256,70 @@ std::vector<uint8_t> serialize_previous_game_data(const std::vector<Player> &pla
 
     std::cout << "Previous game data size: " << previous_game_data.size() << std::endl;
     return previous_game_data;
+}
+
+std::pair<std::map<int, Player>, std::vector<Obstacle>> deserialize_and_update_previous_game_data(const std::vector<uint8_t> &data) {
+    std::map<int, Player> players;
+    std::vector<Obstacle> obstacles;
+
+    std::cout << "Parsing Previous game data: " << data << std::endl;
+    
+    ObjectType type = static_cast<ObjectType>(data[0]);
+    if (type != ObjectType::Player) {
+        std::cerr << "Previous game data does not have player data!" << std::endl;
+        return {players, obstacles};
+    }
+
+    uint8_t num_players = data[1];
+    std::cout << "Player count: " << (int)num_players << std::endl;
+    int curr_data_idx {2};
+    for (size_t curr_player = 0; curr_player < num_players; curr_player++) {
+        uint8_t username_length = data[curr_data_idx + 9];
+        std::cout << "Username length: " << (int)username_length << std::endl;
+
+        auto player_data_begin = data.begin();
+        std::advance(player_data_begin, curr_data_idx);
+
+        auto player_data_end = data.begin();
+        std::advance(player_data_end, curr_data_idx + 10 + username_length);
+
+        std::vector<uint8_t> player_data(player_data_begin, player_data_end);
+        std::cout << "Player data: " << player_data << std::endl;
+        Player p {deserialize_player(player_data)};
+
+        players[p.id] = p;
+        curr_data_idx += player_data.size();
+    }
+    
+    type = static_cast<ObjectType>(data[curr_data_idx]);
+    if (type != ObjectType::Obstacle) {
+        std::cerr << "Previous game data does not have obstacle data! " << (int)type << ", " << curr_data_idx << std::endl;
+        return {players, obstacles};
+    }
+
+    curr_data_idx++;
+    int num_obstacles = data[curr_data_idx];
+    std::cout << "Parsing " << num_obstacles << " obstacles" << std::endl;
+    for (size_t curr_obstacle = 0; curr_obstacle < num_obstacles; curr_obstacle++) {
+        auto obstacle_data_begin = data.begin();
+        std::advance(obstacle_data_begin, curr_data_idx);
+
+        auto obstacle_data_end = data.begin();
+        std::advance(obstacle_data_end, curr_data_idx + obstacle_data_size);
+
+        std::array<uint8_t, obstacle_data_size> obstacle_data;
+        int i {0};
+        for (auto elm = obstacle_data_begin; elm != obstacle_data_end; elm++) {
+            obstacle_data[i] = *elm;
+            i++;
+        }
+        std::cout << "Obstacle data(" << obstacle_data.size() << "): " << obstacle_data << std::endl;
+        Obstacle o {deserialize_obstacle(obstacle_data)};
+
+        obstacles.push_back(o);
+        curr_data_idx += obstacle_data_size;
+    }
+
+    return {players, obstacles};
 }
 
