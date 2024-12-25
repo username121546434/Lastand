@@ -133,6 +133,7 @@ int main(int argv, char **argc) {
                     other_players.push_back(data.p);
                 }
                 std::vector<uint8_t> previous_game_data {serialize_previous_game_data(other_players, obstacles)};
+                previous_game_data.insert(previous_game_data.begin(), static_cast<uint8_t>(MessageToClientTypes::PreviousGameData));
 
                 send_packet(event.peer, previous_game_data, channel_events);
 

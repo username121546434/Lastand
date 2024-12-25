@@ -243,7 +243,6 @@ std::vector<uint8_t> serialize_previous_game_data(const std::vector<Player> &pla
     }
 
     std::vector<uint8_t> previous_game_data {
-        static_cast<uint8_t>(MessageToClientTypes::PreviousGameData),
         static_cast<uint8_t>(ObjectType::Player),
         static_cast<uint8_t>(players.size()),
     };
