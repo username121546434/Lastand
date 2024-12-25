@@ -1,11 +1,13 @@
 #include <SDL3/SDL.h>
 #include "Player.h"
 #include <cstdint>
+#include <cstdlib>
 #include <iostream>
 #include <SDL3/SDL_main.h>
 #include "SDL3/SDL_scancode.h"
 #include "constants.h"
 #include <enet/enet.h>
+#include <utility>
 #include <vector>
 #include "serialize.h"
 #include <map>
@@ -118,6 +120,49 @@ void send_packet(ENetPeer *peer, const T &data, int channel_id) {
     }
 }
 
+// gets the player that is this client
+Player get_this_player(ENetHost *client) {
+    ENetEvent event;
+    int err = enet_host_service(client, &event, 800);
+    if (err < 0) {
+        std::cerr << "Failed to get player data: " << err << std::endl;
+        std::exit(1);
+    }
+    Player this_player;
+    if (event.type == ENET_EVENT_TYPE_RECEIVE) {
+        std::vector<uint8_t> vec(event.packet->data + 1, event.packet->data + event.packet->dataLength);
+        std::cout << "Data received: " << *(int*)event.packet->data << " and " << vec << std::endl;
+        this_player = deserialize_player(vec);
+        std::cout << "Received player: " << this_player.username << ", ("
+                  << this_player.x << ", " << this_player.y << "), (" << (int)this_player.color.r << ','
+                  << (int)this_player.color.g << ',' << (int)this_player.color.b << ',' << (int)this_player.color.a << "):"
+                  << (int)this_player.id << std::endl;
+    } else {
+        std::cerr << "Did not receive player data: " << event.type << std::endl;
+        std::exit(1);
+    }
+    return this_player;
+}
+
+auto get_previous_game_data(ENetHost *client) {
+    ENetEvent event;
+    int err = enet_host_service(client, &event, 800);
+    if (err < 0) {
+        std::cerr << "Failed to get player data: " << err << std::endl;
+        std::exit(1);
+    }
+    if (event.type == ENET_EVENT_TYPE_RECEIVE) {
+        std::vector<uint8_t> vec(event.packet->data + 1, event.packet->data + event.packet->dataLength);
+        std::cout << "Data received: " << *(int*)event.packet->data << " and " << vec << std::endl;
+        auto [previous_players, obstacles] = deserialize_and_update_previous_game_data(vec);
+        std::cout << "Received " << previous_players.size() << " player(s) and " << obstacles.size() << " obstacle(s)" << std::endl;
+        return std::make_pair(previous_players, obstacles);
+    } else {
+        std::cerr << "Did not receive previous game data: " << event.type << std::endl;
+        std::exit(1);
+    }
+}
+
 int main(int argv, char **argc) {
     if (enet_initialize() != 0) {
         std::cerr << "An error occurred while initializing Enet!" << std::endl;
@@ -180,45 +225,13 @@ int main(int argv, char **argc) {
     }
 
     // get player data
-    int err = enet_host_service(client, &enet_event, 800);
-    if (err < 0) {
-        std::cerr << "Failed to get player data: " << err << std::endl;
-        return 1;
-    }
-    Player this_player;
-    if (enet_event.type == ENET_EVENT_TYPE_RECEIVE) {
-        std::vector<uint8_t> vec(enet_event.packet->data + 1, enet_event.packet->data + enet_event.packet->dataLength);
-        std::cout << "Data received: " << *(int*)enet_event.packet->data << " and " << vec << std::endl;
-        this_player = deserialize_player(vec);
-        std::cout << "Received player: " << this_player.username << ", ("
-                  << this_player.x << ", " << this_player.y << "), (" << (int)this_player.color.r << ','
-                  << (int)this_player.color.g << ',' << (int)this_player.color.b << ',' << (int)this_player.color.a << "):"
-                  << (int)this_player.id << std::endl;
-    } else {
-        std::cerr << "Did not receive player data: " << enet_event.type << std::endl;
-        return 1;
-    }
+    Player this_player = get_this_player(client);
 
     // get previous game data
-    err = enet_host_service(client, &enet_event, 800);
-    if (err < 0) {
-        std::cerr << "Failed to get player data: " << err << std::endl;
-        return 1;
-    }
-    if (enet_event.type == ENET_EVENT_TYPE_RECEIVE) {
-        std::vector<uint8_t> vec(enet_event.packet->data + 1, enet_event.packet->data + enet_event.packet->dataLength);
-        std::cout << "Data received: " << *(int*)enet_event.packet->data << " and " << vec << std::endl;
-        auto [previous_players, obstacles] = deserialize_and_update_previous_game_data(vec);
-        std::cout << "Received " << previous_players.size() << " player(s) and " << obstacles.size() << " obstacle(s)" << std::endl;
-    } else {
-        std::cerr << "Did not receive player data: " << enet_event.type << std::endl;
-        return 1;
-    }
+    auto [players, obstacles] = get_previous_game_data(client);
 
     std::pair<short, short> player_movement;
-    Uint32 lastTime = SDL_GetTicks();
 
-    std::map<int, Player> players;
     players[this_player.id] = this_player;
 
     bool running = true;
