@@ -300,6 +300,7 @@ std::pair<std::map<int, Player>, std::vector<Obstacle>> deserialize_and_update_p
     curr_data_idx++;
     int num_obstacles = data[curr_data_idx];
     std::cout << "Parsing " << num_obstacles << " obstacles" << std::endl;
+    curr_data_idx++;
     for (size_t curr_obstacle = 0; curr_obstacle < num_obstacles; curr_obstacle++) {
         auto obstacle_data_begin = data.begin();
         std::advance(obstacle_data_begin, curr_data_idx);
