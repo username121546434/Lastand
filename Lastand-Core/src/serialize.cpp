@@ -321,6 +321,11 @@ std::pair<std::map<int, Player>, std::vector<Obstacle>> deserialize_and_update_p
         curr_data_idx += obstacle_data_size;
     }
 
+    std::cout << "curr_data_idx: " << curr_data_idx << std::endl;
+    if (curr_data_idx != data.size()) {
+        std::cerr << "Previous game data is not fully parsed! " << data.size() << std::endl;
+    }
+
     return {players, obstacles};
 }
 
