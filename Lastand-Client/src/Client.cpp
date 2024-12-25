@@ -4,7 +4,6 @@
 #include <cstdlib>
 #include <iostream>
 #include <SDL3/SDL_main.h>
-#include "SDL3/SDL_scancode.h"
 #include "constants.h"
 #include <enet/enet.h>
 #include <utility>
@@ -16,6 +15,20 @@ void draw_player(SDL_Renderer *renderer, const Player &p) {
     SDL_FRect frect {static_cast<float>(p.x / 2.0), static_cast<float>(p.y / 2.0), player_size, player_size};
     bool success;
     success = SDL_SetRenderDrawColor(renderer, p.color.r, p.color.g, p.color.g, p.color.a);
+    if (!success) std::cerr << "Error in SDL_SetRenderDrawColor: " << SDL_GetError();
+    success = SDL_RenderFillRect(renderer, &frect);
+    if (!success) std::cerr << "Error in SDL_RenderFillRect: " << SDL_GetError();
+}
+
+void draw_obstacle(SDL_Renderer *renderer, const Obstacle &o) {
+    SDL_FRect frect {
+        static_cast<float>(o.x / 2.0),
+        static_cast<float>(o.y / 2.0),
+        static_cast<float>(o.width),
+        static_cast<float>(o.height)
+    };
+    // std::cout << "Drawing obstacle at: (" << o.x << ", " << o.y << ") (" << o.width << ", " << o.height << ")" << std::endl;
+    bool success = SDL_SetRenderDrawColor(renderer, o.color.r, o.color.g, o.color.b, o.color.a);
     if (!success) std::cerr << "Error in SDL_SetRenderDrawColor: " << SDL_GetError();
     success = SDL_RenderFillRect(renderer, &frect);
     if (!success) std::cerr << "Error in SDL_RenderFillRect: " << SDL_GetError();
@@ -144,7 +157,7 @@ Player get_this_player(ENetHost *client) {
     return this_player;
 }
 
-auto get_previous_game_data(ENetHost *client) {
+std::pair<std::map<int, Player>, std::vector<Obstacle>> get_previous_game_data(ENetHost *client) {
     ENetEvent event;
     int err = enet_host_service(client, &event, 800);
     if (err < 0) {
@@ -272,6 +285,9 @@ int main(int argv, char **argc) {
 
         for (const auto &[id, player] : players)
             draw_player(renderer, player);
+        
+        for (const auto &obstacle : obstacles)
+            draw_obstacle(renderer, obstacle);
 
         SDL_RenderPresent(renderer);
     }
