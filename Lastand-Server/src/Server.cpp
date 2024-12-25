@@ -98,6 +98,9 @@ int main(int argv, char **argc) {
     ENetEvent event;
     std::cout << "hosting on port " << address.port << std::endl;
 
+    const std::vector<Obstacle> obstacles {load_from_file("maps/map1.txt")};
+    std::cout << "Loaded " << obstacles.size() << " obstacles" << std::endl;
+
     auto last_time = std::chrono::high_resolution_clock::now();
 
     while (running) {
@@ -121,11 +124,17 @@ int main(int argv, char **argc) {
                 broadcast_data.insert(broadcast_data.cbegin(), static_cast<uint8_t>(MessageToClientTypes::PlayerJoined));
                 broadcast_packet(server, broadcast_data, channel_events);
 
+                std::cout << "Sending previous game data to player " << new_player_id << std::endl;
+
+                std::vector<Player> other_players;
                 for (const auto &[id, data] : players) {
-                    std::vector<uint8_t> send_data = serialize_player(data.p);
-                    send_data.insert(send_data.cbegin(), static_cast<uint8_t>(MessageToClientTypes::PlayerJoined));
-                    broadcast_packet(server, send_data, channel_events);
+                    if(id == new_player_id)
+                        continue;
+                    other_players.push_back(data.p);
                 }
+                std::vector<uint8_t> previous_game_data {serialize_previous_game_data(other_players, obstacles)};
+
+                send_packet(event.peer, previous_game_data, channel_events);
 
                 new_player_id++;
                 break;

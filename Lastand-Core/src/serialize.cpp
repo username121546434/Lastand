@@ -216,3 +216,45 @@ void deserialize_and_update_game_player_positions(const std::vector<uint8_t> &da
     }
 }
 
+std::vector<uint8_t> serialize_previous_game_data(const std::vector<Player> &players, const std::vector<Obstacle> &obstacles) {
+    std::vector<uint8_t> player_data;
+    for (const auto &p : players) {
+        auto player = serialize_player(p);
+        player_data.insert(player_data.end(), player.begin(), player.end());
+    }
+    std::vector<uint8_t> obstacle_data;
+    std::cout << "obstacles size: " << obstacles.size() << std::endl;
+    int obstacle_index {0};
+    for (const auto &obs: obstacles) {
+        auto data = serialize_obstacle(obs);
+        obstacle_data.insert(obstacle_data.cend(), data.begin(), data.end());
+        obstacle_index++;
+        if (obstacle_index % 10 == 0) {
+            std::cout << "Processed obstacle " << obstacle_index << std::endl;
+        }
+    }
+
+    std::cout << "Player data size: " << player_data.size() << std::endl;
+    std::cout << "Obstacle data size: " << obstacle_data.size() << std::endl;
+
+    if (player_data.empty() && obstacle_data.empty()) {
+        std::cout << "Not sending previous game data as it is empty" << std::endl;
+        return {};
+    }
+
+    std::vector<uint8_t> previous_game_data {
+        static_cast<uint8_t>(MessageToClientTypes::PreviousGameData),
+        static_cast<uint8_t>(ObjectType::Player),
+        static_cast<uint8_t>(players.size()),
+    };
+    previous_game_data.reserve(player_data.size() + obstacle_data.size() + 7);
+    previous_game_data.insert(previous_game_data.cend(), player_data.begin(), player_data.end());
+
+    previous_game_data.push_back(static_cast<uint8_t>(ObjectType::Obstacle));
+    previous_game_data.push_back(static_cast<uint8_t>(obstacles.size()));
+    previous_game_data.insert(previous_game_data.cend(), obstacle_data.begin(), obstacle_data.end());
+
+    std::cout << "Previous game data size: " << previous_game_data.size() << std::endl;
+    return previous_game_data;
+}
+

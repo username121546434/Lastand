@@ -1,9 +1,11 @@
 #pragma once
+#include <array>
 #include <vector>
 #ifndef SERIALIZE_H
 #define SERIALIZE_H
 #include <cstdint>
 #include "Player.h"
+#include "Obstacle.h"
 #include <map>
 
 enum class MessageToServerTypes: uint8_t {
@@ -37,10 +39,18 @@ enum class MessageToClientTypes: uint8_t {
 
     // player attributes (username or color) have changed
     SetPlayerAttributes = 1,
-    PlayerDied = 2, // player has died
-    PlayerLeft = 3, // player has left
-    PlayerJoined = 4, // player has joined
-    PlayerWon = 5, // player has won
+    PlayerDied = 2, // a player has died
+    PlayerLeft = 3, // a player has left
+    PlayerJoined = 4, // a player has joined
+    PlayerWon = 5, // a player has won
+    PlayerKilled = 6, // a player has killed another player
+    // sent when a player joins late
+    PreviousGameData = 7
+};
+
+enum class ObjectType: uint8_t {
+    Player = 0,
+    Obstacle = 1,
 };
 
 enum class SetPlayerAttributesTypes: uint8_t {
