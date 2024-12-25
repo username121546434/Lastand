@@ -100,6 +100,63 @@ Player deserialize_player(const std::vector<uint8_t> &data) {
     return p;
 }
 
+
+std::array<uint8_t, 12> serialize_obstacle(const Obstacle &obstacle) {
+    std::array<uint8_t, 12> result;
+
+    auto [high_byte, low_byte] = serialize_uint16(obstacle.x);
+    result[0] = high_byte;
+    result[1] = low_byte;
+
+    std::tie(high_byte, low_byte) = serialize_uint16(obstacle.y);
+    result[2] = high_byte;
+    result[3] = low_byte;
+
+    std::tie(high_byte, low_byte) = serialize_uint16(obstacle.width);
+    result[4] = high_byte;
+    result[5] = low_byte;
+
+    std::tie(high_byte, low_byte) = serialize_uint16(obstacle.height);
+    result[6] = high_byte;
+    result[7] = low_byte;
+
+    auto color_data = serialize_color(obstacle.color);
+    result[8] = color_data[0];
+    result[9] = color_data[1];
+    result[10] = color_data[2];
+    result[11] = color_data[3];
+
+    return result;
+}
+
+
+Obstacle deserialize_obstacle(const std::array<uint8_t, 12> &data) {
+    Obstacle result;
+
+    uint8_t high_byte = data[0];
+    uint8_t low_byte = data[1];
+    result.x = deserialize_uint16(high_byte, low_byte);
+
+    high_byte = data[2];
+    low_byte = data[3];
+    result.y = deserialize_uint16(high_byte, low_byte);
+
+    high_byte = data[4];
+    low_byte = data[5];
+    result.width = deserialize_uint16(high_byte, low_byte);
+
+    high_byte = data[6];
+    low_byte = data[7];
+    result.height = deserialize_uint16(high_byte, low_byte);
+
+    result.color.r = data[8];
+    result.color.g = data[9];
+    result.color.b = data[10];
+    result.color.a = data[11];
+
+    return result;
+}
+
 void update_player_delta(ClientMovement movement, bool key_up, std::pair<short, short> &player_delta) {
     auto m = static_cast<uint8_t>(movement);
     if (!key_up) {

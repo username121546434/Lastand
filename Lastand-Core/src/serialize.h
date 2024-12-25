@@ -51,9 +51,14 @@ enum class SetPlayerAttributesTypes: uint8_t {
 std::vector<uint8_t> serialize_player(const Player &player);
 Player deserialize_player(const std::vector<uint8_t> &data);
 
+std::array<uint8_t, 12> serialize_obstacle(const Obstacle &obstacle);
+Obstacle deserialize_obstacle(const std::array<uint8_t, 12> &data);
+
 void update_player_delta(ClientMovement movement, bool key_up, std::pair<short, short> &player_delta);
 
 std::vector<uint8_t> serialize_game_player_positions(const std::vector<Player> &players);
 void deserialize_and_update_game_player_positions(const std::vector<uint8_t> &data, std::map<int, Player> &players);
+
+std::vector<uint8_t> serialize_previous_game_data(const std::vector<Player> &players, const std::vector<Obstacle> &obstacles);
 
 #endif
