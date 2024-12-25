@@ -1,7 +1,10 @@
 file(GLOB_RECURSE SERVER_SOURCES "src/*.cpp" "src/*.h")
 
 add_executable(Lastand-Server ${SERVER_SOURCES})
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++ -static-libgcc")
+
+if(MINGW)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++ -static-libgcc")
+endif()
 
 # Include directories
 target_include_directories(Lastand-Server PRIVATE 
@@ -20,4 +23,12 @@ endif()
 
 # Link enet
 target_link_directories(Lastand-Server PRIVATE ../ext/ENet/lib)
+
+# Copy resources folder
+add_custom_command(
+    TARGET Lastand-Server POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_CURRENT_SOURCE_DIR}/resources
+            $<TARGET_FILE_DIR:Lastand-Server>
+)
 
