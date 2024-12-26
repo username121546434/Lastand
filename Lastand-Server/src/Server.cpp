@@ -17,6 +17,14 @@ int players_connected {0};
 const int max_players = 100;
 const Player default_player {0, 0, {255, 255, 255, 255}, "Player", 0};
 
+// the most top left the player can go
+constexpr uint16_t min_x {0};
+constexpr uint16_t min_y {0};
+
+// the most bottom right the player can go
+constexpr uint16_t max_x {(window_size - player_size) * 2};
+constexpr uint16_t max_y {(window_size - player_size) * 2};
+
 struct ClientData {
     Player p;
     std::pair<short, short> player_movement;
@@ -67,6 +75,14 @@ void parse_event(const ENetEvent &event) {
 
 void run_game_tick(std::map<int, ClientData> &players) {
     for (auto &[id, data] : players) {
+        if ((data.p.x <= min_x && data.player_movement.first == -1) ||
+            (data.p.x >= max_x && data.player_movement.first == 1)) {
+            data.player_movement.first = 0;
+        }
+        if ((data.p.y <= min_y && data.player_movement.second == -1) ||
+            (data.p.y >= max_y && data.player_movement.second == 1)) {
+            data.player_movement.second = 0;
+        }
         data.p.move(data.player_movement);
         if (data.player_movement != std::make_pair<short, short>(0, 0))
             std::cout << "Player moved to " << id << ": " << data.p.x << ", " << data.p.y << std::endl;

@@ -195,7 +195,7 @@ int main(int argv, char **argc) {
 
     SDL_Window *window {nullptr};
     SDL_Renderer *renderer {nullptr};
-    SDL_CreateWindowAndRenderer(window_title.c_str(), 600, 600, SDL_WINDOW_MAXIMIZED, &window, &renderer);
+    SDL_CreateWindowAndRenderer(window_title.c_str(), window_size, window_size, SDL_WINDOW_MAXIMIZED, &window, &renderer);
 
     if (!window || window == NULL) {
         std::cerr << "Failed to create window: " << SDL_GetError() << std::endl;
