@@ -28,7 +28,7 @@ std::ostream &operator<<(std::ostream &os, const ENetAddress &e) {
 }
 
 void send_packet(ENetPeer *peer, const std::vector<uint8_t> &data, int channel_id) {
-    std::cout << "Sending packet: " << data << std::endl;
+    std::cout << "Sending packet: " << data << '\n';
     ENetPacket *packet = enet_packet_create(data.data(), data.size(), ENET_PACKET_FLAG_RELIABLE);
     int val = enet_peer_send(peer, channel_id, packet);
     if (val != 0) {
@@ -102,12 +102,14 @@ int main(int argv, char **argc) {
     const std::vector<Obstacle> obstacles {load_from_file("maps/map1.txt")};
     std::cout << "Loaded " << obstacles.size() << " obstacles" << std::endl;
 
+#if defined(DEBUG)
     for (const auto &o : obstacles) {
         std::cout << "Read obstacle at: (" << o.x << ", " << o.y << ") (" << o.width << ", " << o.height << ")"
             << "(" << (int)o.color.r << ", " << (int)o.color.g << ", " << (int)o.color.b << ", " << (int)o.color.a << ")" << std::endl;
         auto data = serialize_obstacle(o);
         std::cout << "Correct obstacle serialized: " << data << std::endl;
     }
+#endif
 
     auto last_time = std::chrono::high_resolution_clock::now();
 
@@ -142,6 +144,7 @@ int main(int argv, char **argc) {
                 }
                 std::vector<uint8_t> previous_game_data {serialize_previous_game_data(other_players, obstacles)};
 
+#ifdef DEBUG
                 // testing if serializing and deserializing previous game data works
                 auto [p2, o2] = deserialize_and_update_previous_game_data(previous_game_data);
                 if (p2.size() != other_players.size()) {
@@ -162,6 +165,7 @@ int main(int argv, char **argc) {
                     if (o1.x != o3.x || o1.y != o3.y || o1.width != o3.width || o1.height != o3.height || o1.color.r != o3.color.r || o1.color.g != o3.color.g || o1.color.b != o3.color.b || o1.color.a != o3.color.a)
                         std::cerr << "slkdjflskdf obstacle is different " << std::endl;
                 }
+#endif
 
                 previous_game_data.insert(previous_game_data.begin(), static_cast<uint8_t>(MessageToClientTypes::PreviousGameData));
 
@@ -174,10 +178,12 @@ int main(int argv, char **argc) {
                 std::vector<short> data;
                 for (int i {0}; i < event.packet->dataLength; i++)
                     data.push_back(event.packet->data[i]);
+#ifdef DEBUG
                 std::cout << "A packet of length " << event.packet->dataLength
                         << " containing \"" << data << "\" "
                         << "was received from " << event.peer->address << " "
                         << "from channel " << static_cast<int>(event.channelID) << std::endl;
+#endif
                 parse_event(event);
                 break;
             }

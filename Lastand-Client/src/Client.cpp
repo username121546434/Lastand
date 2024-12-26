@@ -271,7 +271,7 @@ int main(int argv, char **argc) {
                     std::vector<uint8_t> data;
                     for (int i {0}; i < enet_event.packet->dataLength; i++)
                         data.push_back(enet_event.packet->data[i]);
-                    std::cout << "Received data: " << data << " on channel: " << (int)enet_event.channelID << std::endl;
+                    std::cout << "Received data: " << data << " on channel: " << (int)enet_event.channelID << '\n';
                     parse_message_from_server(data, players);
                     break;
                 }

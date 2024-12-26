@@ -25,7 +25,9 @@ std::vector<Obstacle> load_from_file(const std::string &file_name) {
         // Parse the line
         if (ss >> x >> delimiter >> y >> delimiter >> width >> delimiter 
                >> height >> delimiter >> r >> delimiter >> g >> delimiter >> b >> delimiter >> a) {
+#ifdef DEBUG
             std::cout << "Obstacle: " << x << ", " << y << ", " << width << ", " << height << ", " << r << ", " << g << ", " << b << ", " << a << std::endl;
+#endif
             Obstacle obstacle{x, y, width, height, {(uint8_t)r, (uint8_t)g, (uint8_t)b, (uint8_t)a}};
             obstacles.push_back(obstacle);
         }

@@ -230,9 +230,11 @@ std::vector<uint8_t> serialize_previous_game_data(const std::vector<Player> &pla
         auto data = serialize_obstacle(obs);
         obstacle_data.insert(obstacle_data.cend(), data.begin(), data.end());
         obstacle_index++;
+#ifdef DEBUG
         if (obstacle_index % 10 == 0) {
             std::cout << "Processed obstacle " << obstacle_index << std::endl;
         }
+#endif
     }
 
     std::cout << "Player data size: " << player_data.size() << std::endl;
@@ -262,7 +264,9 @@ std::pair<std::map<int, Player>, std::vector<Obstacle>> deserialize_and_update_p
     std::map<int, Player> players;
     std::vector<Obstacle> obstacles;
 
+#ifdef DEBUG
     std::cout << "Parsing Previous game data: " << data << std::endl;
+#endif
     
     ObjectType type = static_cast<ObjectType>(data[0]);
     if (type != ObjectType::Player) {
@@ -275,7 +279,6 @@ std::pair<std::map<int, Player>, std::vector<Obstacle>> deserialize_and_update_p
     int curr_data_idx {2};
     for (size_t curr_player = 0; curr_player < num_players; curr_player++) {
         uint8_t username_length = data[curr_data_idx + 9];
-        std::cout << "Username length: " << (int)username_length << std::endl;
 
         auto player_data_begin = data.begin();
         std::advance(player_data_begin, curr_data_idx);
@@ -284,7 +287,9 @@ std::pair<std::map<int, Player>, std::vector<Obstacle>> deserialize_and_update_p
         std::advance(player_data_end, curr_data_idx + 10 + username_length);
 
         std::vector<uint8_t> player_data(player_data_begin, player_data_end);
+#ifdef DEBUG
         std::cout << "Player data: " << player_data << std::endl;
+#endif
         Player p {deserialize_player(player_data)};
 
         players[p.id] = p;
@@ -314,7 +319,9 @@ std::pair<std::map<int, Player>, std::vector<Obstacle>> deserialize_and_update_p
             obstacle_data[i] = *elm;
             i++;
         }
+#ifdef DEBUG
         std::cout << "Obstacle data(" << obstacle_data.size() << "): " << obstacle_data << std::endl;
+#endif
         Obstacle o {deserialize_obstacle(obstacle_data)};
 
         obstacles.push_back(o);
