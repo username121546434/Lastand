@@ -2,9 +2,7 @@ file(GLOB_RECURSE SERVER_SOURCES "src/*.cpp" "src/*.h")
 
 add_executable(Lastand-Server ${SERVER_SOURCES})
 
-if(MINGW)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++ -static-libgcc")
-endif()
+target_compile_options(Lastand-Server PRIVATE $<$<CXX_COMPILER_ID:GNU>:-static-libstdc++ -static-libgcc>)
 
 # Include directories
 target_include_directories(Lastand-Server PRIVATE 
