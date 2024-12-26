@@ -1,7 +1,10 @@
 file(GLOB_RECURSE CLIENT_SOURCES "src/*.cpp" "src/*.h")
 
 add_executable(Lastand-Client ${CLIENT_SOURCES})
-target_compile_options(Lastand-Client PRIVATE $<$<CXX_COMPILER_ID:GNU>:-static-libstdc++ -static-libgcc>)
+if(MINGW)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++ -static-libgcc")
+endif()
+target_compile_definitions(Lastand-Client PRIVATE $<$<CONFIG:Debug>:DEBUG>)
 
 add_subdirectory(../ext/SDL3 EXLUDE_FROM_ALL)
 
