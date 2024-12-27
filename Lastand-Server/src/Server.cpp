@@ -12,6 +12,7 @@
 #include <utility>
 #include <vector>
 #include <chrono>
+#include "physics.h"
 
 int players_connected {0};
 const int max_players = 100;
@@ -84,6 +85,21 @@ void run_game_tick(std::map<int, ClientData> &players, const std::vector<Obstacl
         if ((data.p.y <= min_y && data.player_movement.second == -1) ||
             (data.p.y >= max_y && data.player_movement.second == 1)) {
             data.player_movement.second = 0;
+        }
+        for (auto obstacle : obstacles) {
+            auto collision = detect_collision(data.p, obstacle);
+            if (!(collision.touch || collision.overlap)) {
+                continue;
+            }
+            if (collision.axis == CollisionAxis::Vertical &&
+                ((collision.allowed_directions == ClientMovement::Left && data.player_movement.first) ||
+                 (collision.allowed_directions == ClientMovement::Right && !data.player_movement.first)))
+                data.player_movement.first = 0;
+            else if (collision.axis == CollisionAxis::Horizontal &&
+                ((collision.allowed_directions == ClientMovement::Up && data.player_movement.second) ||
+                 (collision.allowed_directions == ClientMovement::Down && !data.player_movement.second)))
+                data.player_movement.second = 0;
+            break;
         }
         data.p.move(data.player_movement);
         if (data.player_movement != std::make_pair<short, short>(0, 0))
@@ -221,7 +237,7 @@ int main(int argv, char **argc) {
         auto now = std::chrono::high_resolution_clock::now();
         auto elapsed_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_time).count();
         if (elapsed_time_ms >= tick_rate_ms) {
-            run_game_tick(players);
+            run_game_tick(players, obstacles);
 
             std::vector<Player> players_to_update;
             players_to_update.reserve(players.size());
