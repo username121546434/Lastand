@@ -1,3 +1,4 @@
+#include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -6,6 +7,7 @@
 #include <iostream>
 #include <ostream>
 #include <string>
+#include "Projectile.h"
 #include "constants.h"
 #include "Player.h"
 #include "serialize.h"
@@ -48,30 +50,62 @@ void send_packet(ENetPeer *peer, const std::vector<uint8_t> &data, int channel_i
 }
 
 void broadcast_packet(ENetHost *server, const std::vector<uint8_t> &data, int channel_id) {
-    std::cout << "Broadcasting packet: " << data << std::endl;
+    std::cout << "Broadcasting packet: " << data << '\n';
     ENetPacket *packet = enet_packet_create(data.data(), data.size(), ENET_PACKET_FLAG_RELIABLE);
     enet_host_broadcast(server, channel_id, packet);
 }
 
-void parse_event(const ENetEvent &event) {
+void parse_client_move(const ENetEvent &event) {
+    ClientData &cd {*static_cast<ClientData *>(event.peer->data)};
+    ClientMovementTypes movement_type {event.packet->data[1]};
+    ClientMovement movement {event.packet->data[2]};
+    switch (movement_type) {
+        case ClientMovementTypes::Start:
+            update_player_delta(movement, false, cd.player_movement);
+            break;
+        case ClientMovementTypes::Stop:
+            update_player_delta(movement, true, cd.player_movement);
+            break;
+        default:
+            std::cerr << "Client movement type not recognized: " << (int)movement_type << std::endl;
+    }
+    std::cout << "Client movement updated to: " << cd.player_movement.first << ", " << cd.player_movement.second << '\n';
+}
+
+void parse_client_shoot(const ENetEvent &event, std::vector<ProjectileDouble> &projectiles) {
+    assert(event.packet->dataLength == 13);
+    std::array<uint8_t, 12> projectile_data {
+        event.packet->data[1],
+        event.packet->data[2],
+        event.packet->data[3],
+        event.packet->data[4],
+        event.packet->data[5],
+        event.packet->data[6],
+        event.packet->data[7],
+        event.packet->data[8],
+        event.packet->data[9],
+        event.packet->data[10],
+        event.packet->data[11],
+        event.packet->data[12],
+    };
+    Projectile p {deserialize_projectile(projectile_data)};
+    ProjectileDouble pd {p};
+
+    std::cout << "Shooting projectile: " << pd.x << ", " << pd.y << ", " << p.dx << ", " << p.dy << '\n';
+
+    projectiles.push_back(pd);
+}
+
+void parse_event(const ENetEvent &event, std::vector<ProjectileDouble> &projectiles) {
     if (event.channelID == channel_updates) {
         MessageToServerTypes event_type {event.packet->data[0]};
-        assert(event_type == MessageToServerTypes::ClientMove);
+        assert(event_type == MessageToServerTypes::ClientMove || event_type == MessageToServerTypes::Shoot);
 
-        ClientData &cd {*static_cast<ClientData *>(event.peer->data)};
-        ClientMovementTypes movement_type {event.packet->data[1]};
-        ClientMovement movement {event.packet->data[2]};
-        switch (movement_type) {
-            case ClientMovementTypes::Start:
-                update_player_delta(movement, false, cd.player_movement);
-                break;
-            case ClientMovementTypes::Stop:
-                update_player_delta(movement, true, cd.player_movement);
-                break;
-            default:
-                std::cerr << "Client movement type not recognized: " << (int)movement_type << std::endl;
+        if (event_type == MessageToServerTypes::ClientMove){
+            parse_client_move(event);
+        } else if (event_type == MessageToServerTypes::Shoot) {
+            parse_client_shoot(event, projectiles);
         }
-        std::cout << "Client movement updated to: " << cd.player_movement.first << ", " << cd.player_movement.second << std::endl;
     }
 }
 
@@ -97,7 +131,7 @@ void run_game_tick(std::map<int, ClientData> &players, const std::vector<Obstacl
         test_py.move(std::make_pair(0, data.player_movement.second));
         auto collision_y = detect_collision(test_py, obstacles);
 
-        std::cout << "Collision x: " << collision_x << ", Collision y: " << collision_y << std::endl;
+        std::cout << "Collision x: " << collision_x << ", Collision y: " << collision_y << '\n';
         auto actual_movement = std::make_pair(data.player_movement.first, data.player_movement.second);
 
         if (collision_x)
@@ -106,7 +140,7 @@ void run_game_tick(std::map<int, ClientData> &players, const std::vector<Obstacl
             actual_movement.second = 0;
         data.p.move(actual_movement);
         if (actual_movement != std::make_pair<short, short>(0, 0))
-            std::cout << "Player moved to " << id << ": " << data.p.x << ", " << data.p.y << std::endl;
+            std::cout << "Player moved to " << id << ": " << data.p.x << ", " << data.p.y << '\n';
     }
 }
 
@@ -131,6 +165,7 @@ int main(int argv, char **argc) {
     }
 
     std::map<int, ClientData> players;
+    std::vector<ProjectileDouble> projectiles;
     int new_player_id {0};
 
     bool running = true;
@@ -224,7 +259,7 @@ int main(int argv, char **argc) {
                         << "was received from " << event.peer->address << " "
                         << "from channel " << static_cast<int>(event.channelID) << std::endl;
 #endif
-                parse_event(event);
+                parse_event(event, projectiles);
                 break;
             }
             case ENET_EVENT_TYPE_DISCONNECT: {

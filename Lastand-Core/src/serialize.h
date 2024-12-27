@@ -1,5 +1,4 @@
 #pragma once
-#include "utils.h"
 #include <array>
 #include <vector>
 #ifndef SERIALIZE_H
@@ -7,11 +6,13 @@
 #include <cstdint>
 #include "Player.h"
 #include "Obstacle.h"
+#include "Projectile.h"
 #include <map>
 
 enum class MessageToServerTypes: uint8_t {
     ClientMove = 0, // input from player to go up, down, left, right
     SetClientAttributes = 1, // used for setting the username or color of player
+    Shoot = 2, // when the player shoots a projectile
 };
 
 enum class ClientMovementTypes: uint8_t {
@@ -78,5 +79,12 @@ void deserialize_and_update_game_player_positions(const std::vector<uint8_t> &da
 
 std::vector<uint8_t> serialize_previous_game_data(const std::vector<Player> &players, const std::vector<Obstacle> &obstacles);
 std::pair<std::map<int, Player>, std::vector<Obstacle>> deserialize_and_update_previous_game_data(const std::vector<uint8_t> &data);
+
+std::array<uint8_t, 12> serialize_projectile(Projectile p);
+Projectile deserialize_projectile(const std::array<uint8_t, 12> &data);
+
+
+int32_t deserialize_int32(std::array<uint8_t, 4> data);
+std::array<uint8_t, 4> serialize_int32(int32_t val);
 
 #endif

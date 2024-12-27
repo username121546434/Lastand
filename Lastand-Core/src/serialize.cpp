@@ -1,4 +1,5 @@
 #include "serialize.h"
+#include "Projectile.h"
 #include <array>
 #include <cstdint>
 #include <iterator>
@@ -23,6 +24,25 @@ std::pair<uint8_t, uint8_t> serialize_uint16(uint16_t val) {
 uint16_t deserialize_uint16(uint8_t high_byte, uint8_t low_byte) {
     uint16_t network_value = (high_byte << 8) | low_byte;
     return ntohs(network_value);
+}
+
+std::array<uint8_t, 4> serialize_int32(int32_t val) {
+    uint32_t network_value = htonl(val); // Convert to network byte order
+
+    uint16_t high_byte = static_cast<uint16_t>((network_value & 0xFFFF0000) >> 16);
+    uint16_t low_byte = static_cast<uint16_t>(network_value & 0x0000FFFF);
+
+    auto [b1, b2] = serialize_uint16(high_byte);
+    auto [b3, b4] = serialize_uint16(low_byte);
+    return {b1, b2, b3, b4};
+}
+
+int32_t deserialize_int32(std::array<uint8_t, 4> data) {
+    uint16_t high_byte = deserialize_uint16(data[0], data[1]);
+    uint16_t low_byte = deserialize_uint16(data[2], data[3]);
+
+    int32_t network_value = (high_byte << 16) | low_byte;
+    return ntohl(network_value);
 }
 
 std::array<uint8_t, 4> serialize_color(Color color) {
@@ -347,5 +367,46 @@ ClientMovement operator|=(ClientMovement &c1, ClientMovement c2) {
 
 bool operator&(ClientMovement c1, ClientMovement c2) {
     return (uint8_t)c1 & (uint8_t)c2;
+}
+
+std::array<uint8_t, 12> serialize_projectile(Projectile p) {
+    std::array<uint8_t, 12> result;
+
+    // testing serializing int32
+    auto [high_byte, low_byte] = serialize_uint16(p.x);
+    result[0] = high_byte;
+    result[1] = low_byte;
+    
+    std::tie(high_byte, low_byte) = serialize_uint16(p.y);
+    result[2] = high_byte;
+    result[3] = low_byte;
+
+    {
+        auto [b1, b2, b3, b4] = serialize_int32(p.dx);
+        result[4] = b1;
+        result[5] = b2;
+        result[6] = b3;
+        result[7] = b4;
+    }
+
+    {
+        auto [b1, b2, b3, b4] = serialize_int32(p.dy);
+        result[8] = b1;
+        result[9] = b2;
+        result[10] = b3;
+        result[11] = b4;
+    }
+
+    return result;
+}
+
+Projectile deserialize_projectile(const std::array<uint8_t, 12> &data) {
+    auto x = deserialize_uint16(data[0], data[1]);
+    auto y = deserialize_uint16(data[2], data[3]);
+
+    auto dx = deserialize_int32({data[4], data[5], data[6], data[7]});
+    auto dy = deserialize_int32({data[8], data[9], data[10], data[11]});
+
+    return {x, y, dx, dy};
 }
 

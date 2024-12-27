@@ -4,6 +4,8 @@
 #include <cstdlib>
 #include <iostream>
 #include <SDL3/SDL_main.h>
+#include "Projectile.h"
+#include "SDL3/SDL_events.h"
 #include "constants.h"
 #include <enet/enet.h>
 #include <utility>
@@ -88,12 +90,24 @@ std::vector<uint8_t> handle_key_up(SDL_Scancode key, std::pair<short, short> &pl
     return msg;
 }
 
-std::vector<uint8_t> process_event(const SDL_Event &event, std::pair<short, short> &player_delta) {
+std::vector<uint8_t> handle_mouse_up(uint16_t x, uint16_t y, SDL_MouseButtonEvent event) {
+    Projectile p {x, y, static_cast<int32_t>(event.x * 2) - x, static_cast<int32_t>(event.y * 2) - y};
+    auto data = serialize_projectile(p);
+    std::vector<uint8_t> msg {
+        static_cast<uint8_t>(MessageToServerTypes::Shoot)
+    };
+    msg.insert(msg.end(), data.begin(), data.end());
+    return msg;
+}
+
+std::vector<uint8_t> process_event(const SDL_Event &event, std::pair<short, short> &player_delta, uint16_t player_x, uint16_t player_y) {
     switch (event.type) {
         case SDL_EVENT_KEY_DOWN:
             return handle_key_down(event.key.scancode, player_delta);
         case SDL_EVENT_KEY_UP:
             return handle_key_up(event.key.scancode, player_delta);
+        case SDL_EVENT_MOUSE_BUTTON_UP:
+            return handle_mouse_up(player_x, player_y, event.button);
         default:
             return {};
     }
@@ -259,8 +273,9 @@ int main(int argv, char **argc) {
             if (event.type == SDL_EVENT_QUIT)
                 running = false;
             auto old_player_movement {player_movement};
-            auto data_to_send {process_event(event, player_movement)};
-            if (!data_to_send.empty() && player_movement != old_player_movement) {
+            auto data_to_send {process_event(event, player_movement, players[this_player.id].x, players[this_player.id].y)};
+            if (!data_to_send.empty() && (player_movement != old_player_movement || event.type == SDL_EVENT_MOUSE_BUTTON_UP)) {
+                std::cout << "Sending data: " << data_to_send << std::endl;
                 send_packet(server, data_to_send, channel_updates);
             }
         }
