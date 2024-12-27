@@ -73,8 +73,10 @@ void parse_event(const ENetEvent &event) {
     }
 }
 
-void run_game_tick(std::map<int, ClientData> &players) {
+void run_game_tick(std::map<int, ClientData> &players, const std::vector<Obstacle> &obstacles) {
     for (auto &[id, data] : players) {
+        if (data.player_movement == std::make_pair<short, short>(0, 0))
+            continue;
         if ((data.p.x <= min_x && data.player_movement.first == -1) ||
             (data.p.x >= max_x && data.player_movement.first == 1)) {
             data.player_movement.first = 0;
