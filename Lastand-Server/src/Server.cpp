@@ -137,7 +137,9 @@ int main(int argv, char **argc) {
     ENetEvent event;
     std::cout << "hosting on port " << address.port << std::endl;
 
-    const std::vector<Obstacle> obstacles {load_from_file("maps/map1.txt")};
+    // map3 kind of looks cool
+    // map5 has a big wall
+    const std::vector<Obstacle> obstacles {load_from_file("maps/map3.txt")};
     std::cout << "Loaded " << obstacles.size() << " obstacles" << std::endl;
 
 #if defined(DEBUG)
