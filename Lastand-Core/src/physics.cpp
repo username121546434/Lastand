@@ -1,67 +1,64 @@
 #include "physics.h"
-#include "serialize.h"
+#include "Player.h"
 #include <cmath>
 #include <iostream>
+#include <vector>
 
 bool is_within(int a, int b, double c) {
     int d = std::abs(a - b);
     return d <= c;
 }
 
-CollisionResult detect_collision(const Player& player, const Obstacle& obstacle) {
-    // Player bounds
-    uint16_t player_right = player.x + (player_size * 2);
-    uint16_t player_bottom = player.y + (player_size * 2);
-    uint16_t player_left = player.x;
-    uint16_t player_top = player.y;
+bool point_in_rect(int x, int y, int width, int height, int px, int py) {
+    return (x <= px && px <= x + width && y <= py && py <= y + height);
+}
 
-    // Obstacle bounds
-    uint16_t obstacle_right = obstacle.x + (obstacle.width * 2);
-    uint16_t obstacle_bottom = obstacle.y + (obstacle.height * 2);
-    uint16_t obstacle_left = obstacle.x;
-    uint16_t obstacle_top = obstacle.y;
+bool detect_collision(const Player& player, const std::vector<Obstacle>& obstacles) {
+    // verticies of the player
+    std::pair<int, int> v1 {player.x, player.y};
+    std::pair<int, int> v2 {player.x + player_size * 2, player.y};
+    std::pair<int, int> v3 {player.x, player.y + player_size * 2};
+    std::pair<int, int> v4 {player.x + player_size * 2, player.y + player_size * 2};
+    for (auto obstacle : obstacles) {
+        // Obstacle bounds
+        uint16_t obstacle_right = obstacle.x + (obstacle.width * 2);
+        uint16_t obstacle_bottom = obstacle.y + (obstacle.height * 2);
+        uint16_t obstacle_left = obstacle.x;
+        uint16_t obstacle_top = obstacle.y;
 
-    // Check for touch
-    bool touch = false;
+        int obstacle_side1_x {obstacle_left};
+        int obstacle_side2_x {obstacle_right};
+        
+        int obstacle_side1_y {obstacle_top};
+        int obstacle_side2_y {obstacle_bottom};
 
-    // Determine axis of touch
-    CollisionAxis axis = CollisionAxis::None;
-    ClientMovement cm = ClientMovement::None;
-
-    if ((player_bottom >= obstacle_top && obstacle_bottom <= player_bottom) ||
-        (player_top >= obstacle_top && player_top <= obstacle_bottom)) {
-        touch = true;
-        axis = CollisionAxis::Vertical;
-        if (is_within(player_right, obstacle_left, 1)) {
-            cm = ClientMovement::Left;
-        } else if (is_within(player_left, obstacle_right, 1)) {
-            cm = ClientMovement::Right;
-        } else {
-            axis = CollisionAxis::None;
-            touch = false;
-        }
-    } else if ((player_left <= obstacle_right && obstacle_left <= player_left) ||
-                (player_right <= obstacle_right && player_right >= obstacle_left)) {
-        touch = true;
-        axis = CollisionAxis::Horizontal;
-        if (is_within(player_bottom, obstacle_top, 1)) {
-            cm = ClientMovement::Up;
-        } else if (is_within(player_top, obstacle_bottom, 1)) {
-            cm = ClientMovement::Down;
-        } else {
-            axis = CollisionAxis::None;
-            touch = false;
+        for (auto v : {v1, v2, v3, v4}) {
+            if (point_in_rect(obstacle.x, obstacle.y, obstacle.width * 2, obstacle.height * 2, v.first, v.second)) {
+                #ifdef DEBUG
+                std::cout << "Player collided with obstacle at: (" << v.first << ", " << v.second << ")" << '\n';
+                #endif
+                return true;
+            }
+            for (auto side_x : {obstacle_side1_x, obstacle_side2_x}) {
+                if (!is_within(side_x, v.first, 1.0) || v.second < obstacle_top || v.second > obstacle_bottom) {
+                    continue;
+                }
+                #ifdef DEBUG
+                std::cout << "Vertical collision: x:" << side_x << " vs (" << v.first << ", " << v.second << ")" << '\n';
+                #endif
+                return true;
+            }
+            for (auto side_y : {obstacle_side1_y, obstacle_side2_y}) {
+                if (!is_within(side_y, v.second, 1.0) || v.first < obstacle_left || v.first > obstacle_right) {
+                    continue;
+                }
+                #ifdef DEBUG
+                std::cout << "Horizontal collision: y:" << side_y << " vs (" << v.first << ", " << v.second << ")" << '\n';
+                #endif
+                return true;
+            }
         }
     }
-
-    // Check for overlap
-    bool overlap =
-        (player_left < obstacle_right && player_right > obstacle_left) ||
-         (player_top < obstacle_bottom && player_bottom > obstacle_top);
-
-    std::cout << "Player: " << player.x << ", " << player.y << " Obstacle: (" << obstacle.x << ", " << obstacle.y
-              << ") (" << obstacle.width << ", " << obstacle.height << ") Touch: " << touch << " Axis: " << (int)axis
-              << " ClientMovement: " << (int)cm << " Overlap: " << overlap << std::endl;
-
-    return {touch, axis, overlap, cm};
+    return false;
 }
+

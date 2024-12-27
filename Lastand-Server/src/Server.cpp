@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <enet/enet.h>
+#include <ios>
 #include <iostream>
 #include <ostream>
 #include <string>
@@ -86,23 +87,25 @@ void run_game_tick(std::map<int, ClientData> &players, const std::vector<Obstacl
             (data.p.y >= max_y && data.player_movement.second == 1)) {
             data.player_movement.second = 0;
         }
-        for (auto obstacle : obstacles) {
-            auto collision = detect_collision(data.p, obstacle);
-            if (!(collision.touch || collision.overlap)) {
-                continue;
-            }
-            if (collision.axis == CollisionAxis::Vertical &&
-                ((collision.allowed_directions == ClientMovement::Left && data.player_movement.first) ||
-                 (collision.allowed_directions == ClientMovement::Right && !data.player_movement.first)))
-                data.player_movement.first = 0;
-            else if (collision.axis == CollisionAxis::Horizontal &&
-                ((collision.allowed_directions == ClientMovement::Up && data.player_movement.second) ||
-                 (collision.allowed_directions == ClientMovement::Down && !data.player_movement.second)))
-                data.player_movement.second = 0;
-            break;
-        }
-        data.p.move(data.player_movement);
-        if (data.player_movement != std::make_pair<short, short>(0, 0))
+        if (data.player_movement == std::make_pair<short, short>(0, 0))
+            continue;
+        Player test_px {data.p};
+        test_px.move(std::make_pair(data.player_movement.first, 0));
+        auto collision_x = detect_collision(test_px, obstacles);
+
+        Player test_py {data.p};
+        test_py.move(std::make_pair(0, data.player_movement.second));
+        auto collision_y = detect_collision(test_py, obstacles);
+
+        std::cout << "Collision x: " << collision_x << ", Collision y: " << collision_y << std::endl;
+        auto actual_movement = std::make_pair(data.player_movement.first, data.player_movement.second);
+
+        if (collision_x)
+            actual_movement.first = 0;
+        if (collision_y)
+            actual_movement.second = 0;
+        data.p.move(actual_movement);
+        if (actual_movement != std::make_pair<short, short>(0, 0))
             std::cout << "Player moved to " << id << ": " << data.p.x << ", " << data.p.y << std::endl;
     }
 }
@@ -113,6 +116,7 @@ int main(int argv, char **argc) {
         return 1;
     }
     std::atexit(enet_deinitialize);
+    std::cout << std::boolalpha;
 
     ENetAddress address;
     address.host = ENET_HOST_ANY;

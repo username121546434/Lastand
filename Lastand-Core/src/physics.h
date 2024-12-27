@@ -5,7 +5,8 @@
 enum class CollisionAxis {
     None,
     Horizontal,
-    Vertical
+    Vertical,
+    Both
 };
 
 struct CollisionResult {
@@ -15,5 +16,5 @@ struct CollisionResult {
     ClientMovement allowed_directions;
 };
 
-CollisionResult detect_collision(const Player& player, const Obstacle& obstacle);
+bool detect_collision(const Player& player, const std::vector<Obstacle>& obstacles);
 
