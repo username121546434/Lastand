@@ -336,3 +336,16 @@ std::pair<std::map<int, Player>, std::vector<Obstacle>> deserialize_and_update_p
     return {players, obstacles};
 }
 
+ClientMovement operator|(ClientMovement c1, ClientMovement c2) {
+    return ClientMovement((uint8_t)c1 | (uint8_t)c2);
+}
+
+ClientMovement operator|=(ClientMovement &c1, ClientMovement c2) {
+    c1 = c1 | c2;
+    return c1;
+}
+
+bool operator&(ClientMovement c1, ClientMovement c2) {
+    return (uint8_t)c1 & (uint8_t)c2;
+}
+

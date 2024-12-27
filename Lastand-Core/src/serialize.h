@@ -1,4 +1,5 @@
 #pragma once
+#include "utils.h"
 #include <array>
 #include <vector>
 #ifndef SERIALIZE_H
@@ -31,6 +32,10 @@ enum class ClientMovement: uint8_t {
     DownRight = Down | Right,
     DownLeft = Down | Left,
 };
+
+ClientMovement operator|(ClientMovement c1, ClientMovement c2);
+ClientMovement operator|=(ClientMovement &c1, ClientMovement c2);
+bool operator&(ClientMovement c1, ClientMovement c2);
 
 enum class MessageToClientTypes: uint8_t {
     // player positions have changed, sent on channel_updates.
