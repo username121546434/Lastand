@@ -1,3 +1,6 @@
+#ifndef OBSTACLE_H
+#define OBSTACLE_H
+
 #include <cstdint>
 #include <string>
 #include "utils.h"
@@ -12,4 +15,4 @@ struct Obstacle {
 };
 
 std::vector<Obstacle> load_from_file(const std::string &file_name);
-
+#endif // OBSTACLE_H
