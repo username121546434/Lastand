@@ -3,11 +3,7 @@
 #include <cmath>
 #include <iostream>
 #include <vector>
-
-bool is_within(int a, int b, double c) {
-    int d = std::abs(a - b);
-    return d <= c;
-}
+#include "utils.h"
 
 bool point_in_rect(int x, int y, int width, int height, int px, int py) {
     return (x <= px && px <= x + width && y <= py && py <= y + height);

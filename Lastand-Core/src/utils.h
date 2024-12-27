@@ -32,3 +32,5 @@ std::ostream &operator<<(std::ostream &os, const std::array<T, n> &v) {
     return os;
 }
 
+bool is_within(int a, int b, double c);
+
