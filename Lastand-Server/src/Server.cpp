@@ -16,6 +16,7 @@
 #include <vector>
 #include <chrono>
 #include "physics.h"
+#include "utils.h"
 
 int players_connected {0};
 const int max_players = 100;
@@ -277,7 +278,8 @@ int main(int argv, char **argc) {
         }
         auto now = std::chrono::high_resolution_clock::now();
         auto elapsed_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_time).count();
-        if (elapsed_time_ms >= tick_rate_ms) {
+        if (elapsed_time_ms >= tick_rate_ms || is_within(elapsed_time_ms, tick_rate_ms, 1)) {
+            last_time = now;
             run_game_tick(players, obstacles);
 
             std::vector<Player> players_to_update;
