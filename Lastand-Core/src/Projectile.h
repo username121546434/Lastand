@@ -2,6 +2,7 @@
 #ifndef PROJECTILE_H
 #define PROJECTILE_H
 #include <cstdint>
+#include <cmath>
 
 struct Projectile {
     uint16_t x;
@@ -16,7 +17,7 @@ struct ProjectileDouble {
     int dx;
     double dy;
 
-    ProjectileDouble(Projectile p) : x(p.x), y(p.y), dx(p.dx >= 0 ? (p.dx > 0 ? 1 : 0) : -1), dy(static_cast<double>(p.dy) / p.dx) {}
+    ProjectileDouble(Projectile p) : x(p.x), y(p.y), dx(p.dx >= 0 ? (p.dx > 0 ? 1 : 0) : -1), dy(static_cast<double>(p.dy) / std::abs(p.dx)) {}
     void move() {
         x += dx;
         y += dy;

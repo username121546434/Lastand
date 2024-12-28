@@ -104,7 +104,8 @@ std::vector<uint8_t> handle_key_up(SDL_Scancode key, std::pair<short, short> &pl
 }
 
 std::vector<uint8_t> handle_mouse_up(uint16_t x, uint16_t y, SDL_MouseButtonEvent event) {
-    Projectile p {x, y, static_cast<int32_t>(event.x * 2) - x, static_cast<int32_t>(event.y * 2) - y};
+    Projectile p {static_cast<uint16_t>(x + player_size), static_cast<uint16_t>(y + player_size), static_cast<int32_t>(event.x * 2) - x, static_cast<int32_t>(event.y * 2) - y};
+    std::cout << "Projectile: (" << p.x << ", " << p.y << ")(" << p.dx << ", " << p.dy << ")\n";
     auto data = serialize_projectile(p);
     std::vector<uint8_t> msg {
         static_cast<uint8_t>(MessageToServerTypes::Shoot)
