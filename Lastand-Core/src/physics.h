@@ -16,5 +16,6 @@ struct CollisionResult {
     ClientMovement allowed_directions;
 };
 
+bool point_in_rect(int x, int y, int width, int height, int px, int py);
 bool detect_collision(const Player& player, const std::vector<Obstacle>& obstacles);
 
