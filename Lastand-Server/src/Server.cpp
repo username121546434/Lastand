@@ -110,7 +110,7 @@ void parse_event(const ENetEvent &event, std::vector<ProjectileDouble> &projecti
     }
 }
 
-void run_game_tick(std::map<int, ClientData> &players, const std::vector<Obstacle> &obstacles) {
+void run_game_tick(std::map<int, ClientData> &players, const std::vector<Obstacle> &obstacles, std::vector<ProjectileDouble> &projectiles) {
     for (auto &[id, data] : players) {
         if (data.player_movement == std::make_pair<short, short>(0, 0))
             continue;
@@ -142,6 +142,9 @@ void run_game_tick(std::map<int, ClientData> &players, const std::vector<Obstacl
         data.p.move(actual_movement);
         if (actual_movement != std::make_pair<short, short>(0, 0))
             std::cout << "Player moved to " << id << ": " << data.p.x << ", " << data.p.y << '\n';
+    }
+    for (auto &p : projectiles) {
+        p.move();
     }
 }
 
@@ -280,7 +283,7 @@ int main(int argv, char **argc) {
         auto elapsed_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_time).count();
         if (elapsed_time_ms >= tick_rate_ms || is_within(elapsed_time_ms, tick_rate_ms, 1)) {
             last_time = now;
-            run_game_tick(players, obstacles);
+            run_game_tick(players, obstacles, projectiles);
 
             std::vector<Player> players_to_update;
             players_to_update.reserve(players.size());
