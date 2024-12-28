@@ -238,7 +238,7 @@ int main(int argv, char **argc) {
 
     // map3 kind of looks cool
     // map5 has a big wall
-    const std::vector<Obstacle> obstacles {load_from_file("maps/map3.txt")};
+    const std::vector<Obstacle> obstacles {load_from_file("maps/map2.txt")};
     std::cout << "Loaded " << obstacles.size() << " obstacles" << std::endl;
     bool sent_empty_projectiles = false;
 
