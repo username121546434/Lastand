@@ -52,9 +52,11 @@ struct ProjectileDouble {
           dy {std::sqrt(1 - dx * dx) * (p.dy < 0 ? -1 : 1)},
           player_id {player_id} {}
     
-    void move() {
-        x += dx;
-        y += dy;
+    void move(uint8_t times = 1) {
+        for (uint8_t i = 0; i < times; i++) {
+            x += dx;
+            y += dy;
+        }
     }
 };
 
@@ -178,8 +180,7 @@ std::map<uint8_t, uint8_t> run_game_tick(std::map<int, ClientData> &players, con
     projectiles_to_remove.reserve(projectiles.size());
     uint16_t idx = 0;
     for (auto &p : projectiles) {
-        p.move();
-        p.move();
+        p.move(4);
         Player player_that_got_hit;
         bool hit_player = std::any_of(
             players.begin(), players.end(),
