@@ -115,7 +115,9 @@ void parse_client_shoot(const ENetEvent &event, std::vector<ProjectileDouble> &p
     Projectile p {deserialize_projectile(projectile_data)};
     ProjectileDouble pd {p, static_cast<ClientData *>(event.peer->data)->p.id};
 
+#ifdef DEBUG
     std::cout << "Shooting projectile: " << pd.x << ", " << pd.y << ", " << p.dx << ", " << p.dy << '\n';
+#endif
 
     projectiles.push_back(pd);
 }
@@ -137,15 +139,16 @@ std::map<uint8_t, uint8_t> run_game_tick(std::map<int, ClientData> &players, con
     for (auto &[id, data] : players) {
         if (data.player_movement == std::make_pair<short, short>(0, 0))
             continue;
-        if ((data.p.x <= min_x && data.player_movement.first == -1) ||
-            (data.p.x >= max_x && data.player_movement.first == 1)) {
-            data.player_movement.first = 0;
+        auto actual_movement = std::make_pair(data.player_movement.first, data.player_movement.second);
+        if ((data.p.x <= min_x && actual_movement.first == -1) ||
+            (data.p.x >= max_x && actual_movement.first == 1)) {
+            actual_movement.first = 0;
         }
-        if ((data.p.y <= min_y && data.player_movement.second == -1) ||
-            (data.p.y >= max_y && data.player_movement.second == 1)) {
-            data.player_movement.second = 0;
+        if ((data.p.y <= min_y && actual_movement.second == -1) ||
+            (data.p.y >= max_y && actual_movement.second == 1)) {
+            actual_movement.second = 0;
         }
-        if (data.player_movement == std::make_pair<short, short>(0, 0))
+        if (actual_movement == std::make_pair<short, short>(0, 0))
             continue;
         Player test_px {data.p};
         test_px.move(std::make_pair(data.player_movement.first, 0));
@@ -155,16 +158,19 @@ std::map<uint8_t, uint8_t> run_game_tick(std::map<int, ClientData> &players, con
         test_py.move(std::make_pair(0, data.player_movement.second));
         auto collision_y = detect_collision(test_py, obstacles);
 
+#ifdef DEBUG
         std::cout << "Collision x: " << collision_x << ", Collision y: " << collision_y << '\n';
-        auto actual_movement = std::make_pair(data.player_movement.first, data.player_movement.second);
+#endif
 
         if (collision_x)
             actual_movement.first = 0;
         if (collision_y)
             actual_movement.second = 0;
         data.p.move(actual_movement);
+#ifdef DEBUG
         if (actual_movement != std::make_pair<short, short>(0, 0))
             std::cout << "Player moved to " << id << ": " << data.p.x << ", " << data.p.y << '\n';
+#endif
     }
     std::map<uint8_t, uint8_t> dead_players;
     std::vector<uint16_t> projectiles_to_remove;
@@ -177,13 +183,15 @@ std::map<uint8_t, uint8_t> run_game_tick(std::map<int, ClientData> &players, con
         bool hit_player = std::any_of(
             players.begin(), players.end(),
             [p, &player_that_got_hit](const std::pair<uint8_t, ClientData> &data) {
-                if (point_in_rect(data.second.p.x, data.second.p.y, player_size * 2, player_size * 2, p.x, p.y)) {
+                if (point_in_rect(data.second.p.x, data.second.p.y, player_size * 2, player_size * 2, p.x, p.y) &&
+                    player_that_got_hit.id != p.player_id)
+                {
                     player_that_got_hit = data.second.p;
                     return true;
                 }
                 return false;
         });
-        if (p.x > max_x || p.y > max_y || p.x < min_x || p.y < min_y || (hit_player && player_that_got_hit.id != p.player_id) ||
+        if (p.x > max_x + 100 || p.y > max_y + 100 || p.x < min_x - 100 || p.y < min_y - 100 || (hit_player) ||
             std::any_of(obstacles.begin(), obstacles.end(), 
                         [p](Obstacle ob) { return point_in_rect(ob.x, ob.y, ob.width * 2, ob.height * 2, p.x, p.y); })
         ) {
@@ -258,6 +266,7 @@ int main(int argv, char **argc) {
                 Player p {default_player};
                 p.username += std::to_string(new_player_id);
                 p.id = new_player_id;
+                p.color = random_color();
                 ClientData c {p, {0, 0}};
                 players[new_player_id] = c;
                 event.peer->data = &players.at(new_player_id);
