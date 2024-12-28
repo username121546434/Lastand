@@ -1,5 +1,6 @@
 #include <SDL3/SDL.h>
 #include "Player.h"
+#include <array>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
@@ -31,6 +32,18 @@ void draw_obstacle(SDL_Renderer *renderer, const Obstacle &o) {
     };
     // std::cout << "Drawing obstacle at: (" << o.x << ", " << o.y << ") (" << o.width << ", " << o.height << ")" << std::endl;
     bool success = SDL_SetRenderDrawColor(renderer, o.color.r, o.color.g, o.color.b, o.color.a);
+    if (!success) std::cerr << "Error in SDL_SetRenderDrawColor: " << SDL_GetError();
+    success = SDL_RenderFillRect(renderer, &frect);
+    if (!success) std::cerr << "Error in SDL_RenderFillRect: " << SDL_GetError();
+}
+
+void draw_projectile(SDL_Renderer *renderer, const Projectile &p) {
+    SDL_FRect frect {
+        static_cast<float>(p.x / 2.0),
+        static_cast<float>(p.y / 2.0),
+        2.0, 2.0
+    };
+    bool success = SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
     if (!success) std::cerr << "Error in SDL_SetRenderDrawColor: " << SDL_GetError();
     success = SDL_RenderFillRect(renderer, &frect);
     if (!success) std::cerr << "Error in SDL_RenderFillRect: " << SDL_GetError();
@@ -113,7 +126,7 @@ std::vector<uint8_t> process_event(const SDL_Event &event, std::pair<short, shor
     }
 }
 
-void parse_message_from_server(const std::vector<uint8_t> &data, std::map<int, Player> &player_data) {
+void parse_message_from_server(const std::vector<uint8_t> &data, std::map<int, Player> &player_data, std::vector<Projectile> &projectiles) {
     MessageToClientTypes type {data[0]};
     std::vector<uint8_t> data_without_type {data.begin() + 1, data.end()};
     switch (type) {
@@ -132,6 +145,27 @@ void parse_message_from_server(const std::vector<uint8_t> &data, std::map<int, P
             int id {data_without_type[0]};
             std::cout << "Player " << id << " left" << std::endl;
             player_data.erase(id);
+            break;
+        }
+        case MessageToClientTypes::UpdateProjectiles: {
+            projectiles.clear();
+            for (size_t i = 1, proj = 0; i < data_without_type.size() && proj < data_without_type[0]; i += sizeof(Projectile), proj++) {
+                std::array<uint8_t, 12> data {
+                    data_without_type[i],
+                    data_without_type[i + 1],
+                    data_without_type[i + 2],
+                    data_without_type[i + 3],
+                    data_without_type[i + 4],
+                    data_without_type[i + 5],
+                    data_without_type[i + 6],
+                    data_without_type[i + 7],
+                    data_without_type[i + 8],
+                    data_without_type[i + 9],
+                    data_without_type[i + 10],
+                    data_without_type[i + 11]
+                };
+                projectiles.push_back(deserialize_projectile(data));
+            }
             break;
         }
     }
@@ -258,7 +292,7 @@ int main(int argv, char **argc) {
     auto [players, obstacles] = get_previous_game_data(client);
 
     std::pair<short, short> player_movement;
-
+    std::vector<Projectile> projectiles;
     players[this_player.id] = this_player;
 
     for (const auto &o : obstacles) {
@@ -287,7 +321,7 @@ int main(int argv, char **argc) {
                     for (int i {0}; i < enet_event.packet->dataLength; i++)
                         data.push_back(enet_event.packet->data[i]);
                     std::cout << "Received data: " << data << " on channel: " << (int)enet_event.channelID << '\n';
-                    parse_message_from_server(data, players);
+                    parse_message_from_server(data, players, projectiles);
                     break;
                 }
                 default:
@@ -303,6 +337,9 @@ int main(int argv, char **argc) {
         
         for (const auto &obstacle : obstacles)
             draw_obstacle(renderer, obstacle);
+
+        for (auto p : projectiles)
+            draw_projectile(renderer, p);
 
         SDL_RenderPresent(renderer);
     }
