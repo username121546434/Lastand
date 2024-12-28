@@ -143,9 +143,18 @@ void run_game_tick(std::map<int, ClientData> &players, const std::vector<Obstacl
         if (actual_movement != std::make_pair<short, short>(0, 0))
             std::cout << "Player moved to " << id << ": " << data.p.x << ", " << data.p.y << '\n';
     }
+    std::vector<uint16_t> projectiles_to_remove;
+    projectiles_to_remove.reserve(projectiles.size());
+    uint16_t idx = 0;
     for (auto &p : projectiles) {
         p.move();
+        if (p.x > max_x || p.y > max_y || p.x < min_x || p.y < min_y) {
+            projectiles_to_remove.push_back(idx);
+        }
+        idx++;
     }
+    for (auto idx : projectiles_to_remove)
+        projectiles.erase(projectiles.begin() + idx);
 }
 
 int main(int argv, char **argc) {
@@ -180,6 +189,7 @@ int main(int argv, char **argc) {
     // map5 has a big wall
     const std::vector<Obstacle> obstacles {load_from_file("maps/map3.txt")};
     std::cout << "Loaded " << obstacles.size() << " obstacles" << std::endl;
+    bool sent_empty_projectiles = false;
 
 #if defined(DEBUG)
     for (const auto &o : obstacles) {
@@ -299,7 +309,7 @@ int main(int argv, char **argc) {
                 broadcast_packet(server, data_to_send, channel_updates);
             }
 
-            if (!projectiles.empty()) {
+            if (!projectiles.empty() || !sent_empty_projectiles) {
                 std::vector<uint8_t> projectile_data;
                 projectile_data.reserve(2 + projectiles.size() * sizeof(Projectile));
                 projectile_data.push_back(static_cast<uint8_t>(MessageToClientTypes::UpdateProjectiles));
@@ -310,6 +320,10 @@ int main(int argv, char **argc) {
                     projectile_data.insert(projectile_data.end(), p_data.cbegin(), p_data.cend());
                 }
                 broadcast_packet(server, projectile_data, channel_updates);
+                if (projectiles.empty())
+                    sent_empty_projectiles = true;
+                else
+                    sent_empty_projectiles = false;
             }
         }
     }
