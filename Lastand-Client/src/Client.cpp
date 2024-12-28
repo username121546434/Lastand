@@ -1,6 +1,7 @@
 #include <SDL3/SDL.h>
 #include "Player.h"
 #include <array>
+#include <cassert>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
@@ -168,6 +169,13 @@ void parse_message_from_server(const std::vector<uint8_t> &data, std::map<int, P
                 projectiles.push_back(deserialize_projectile(data));
             }
             break;
+        }
+        case MessageToClientTypes::PlayerKilled: {
+            assert(data_without_type.size() == 2);
+            uint8_t killer {data_without_type[0]};
+            uint8_t killed {data_without_type[1]};
+            std::cout << player_data.at(killer).username << " has killed " << player_data.at(killed).username << std::endl;
+            player_data.erase(killed);
         }
     }
 }
