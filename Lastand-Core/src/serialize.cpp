@@ -307,10 +307,11 @@ std::pair<std::map<int, Player>, std::vector<Obstacle>> deserialize_and_update_p
         std::advance(player_data_end, curr_data_idx + 10 + username_length);
 
         std::vector<uint8_t> player_data(player_data_begin, player_data_end);
+        Player p {deserialize_player(player_data)};
 #ifdef DEBUG
+        std::cout << "Player: " << p.username << ": " << "(" << p.x << ", " << p.y << ")(" << p.color.r << ", " << p.color.g << ", " << p.color.b << ", " << p.color.a << ")\n";
         std::cout << "Player data: " << player_data << std::endl;
 #endif
-        Player p {deserialize_player(player_data)};
 
         players[p.id] = p;
         curr_data_idx += player_data.size();

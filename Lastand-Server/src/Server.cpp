@@ -287,11 +287,16 @@ int main(int argv, char **argc) {
                 }
                 for (size_t i {0}; i < p2.size(); i++) {
                     auto p1 {other_players[i]};
-                    auto p3 {p2[i]};
-                    if (p1.id != p3.id || p1.username != p3.username || p1.x != p3.x || p1.y != p3.y || p1.color.r != p3.color.r || p1.color.g != p3.color.g || p1.color.b != p3.color.b || p1.color.a != p3.color.a)
-                        std::cerr << "slkdjflskdf player is different " << std::endl;
+                    auto p3 {p2.at(p1.id)};
+                    if (p1.id != p3.id || p1.username != p3.username || p1.x != p3.x || p1.y != p3.y || p1.color.r != p3.color.r || p1.color.g != p3.color.g || p1.color.b != p3.color.b || p1.color.a != p3.color.a) {
+                        std::cerr << "slkdjflskdf player is different\n"
+                                  << "player1: " << p1.username << "(" << (int)p1.x << ", " << (int)p1.y << ")" << "(" << (int)p1.color.r << ", " << (int)p1.color.g << ", " << (int)p1.color.b << ", " << (int)p1.color.a << ")\n"
+                                  << " player2: " << p3.username << "(" << (int)p3.x << ", " << (int)p3.y << ")" << "(" << (int)p3.color.r << ", " << (int)p3.color.g << ", " << (int)p3.color.b << ", " << (int)p3.color.a << ")" << std::endl;
+                    }
                 }
+                std::cout << "Checking obstacles" << std::endl;
                 for (size_t i {0}; i < o2.size(); i++) {
+                    std::cout << "Checking obstacle " << i << std::endl;
                     auto o1 {obstacles[i]};
                     auto o3 {o2[i]};
                     if (o1.x != o3.x || o1.y != o3.y || o1.width != o3.width || o1.height != o3.height || o1.color.r != o3.color.r || o1.color.g != o3.color.g || o1.color.b != o3.color.b || o1.color.a != o3.color.a)
