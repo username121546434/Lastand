@@ -45,15 +45,14 @@ enum class MessageToClientTypes: uint8_t {
 
     // player attributes (username or color) have changed
     SetPlayerAttributes = 1,
-    PlayerDied = 2, // a player has died
+    PlayerKilled = 2, // a player has killed another player
     PlayerLeft = 3, // a player has left
     PlayerJoined = 4, // a player has joined
     PlayerWon = 5, // a player has won
-    PlayerKilled = 6, // a player has killed another player
     // sent when a player joins late
-    PreviousGameData = 7,
+    PreviousGameData = 6,
     // projectiles have moved
-    UpdateProjectiles = 8
+    UpdateProjectiles = 7
 };
 
 enum class ObjectType: uint8_t {
