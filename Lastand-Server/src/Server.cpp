@@ -153,7 +153,7 @@ void run_game_tick(std::map<int, ClientData> &players, const std::vector<Obstacl
         if (p.x > max_x || p.y > max_y || p.x < min_x || p.y < min_y ||
             std::any_of(obstacles.begin(), obstacles.end(), 
                         [p](Obstacle ob) { return point_in_rect(ob.x, ob.y, ob.width * 2, ob.height * 2, p.x, p.y); })
-            ) {
+        ) {
             projectiles_to_remove.push_back(idx);
         }
         idx++;
