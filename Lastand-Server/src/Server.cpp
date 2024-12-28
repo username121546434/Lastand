@@ -37,6 +37,27 @@ struct ClientData {
     std::pair<short, short> player_movement;
 };
 
+// used in the server to store projectiles with decimal coordinates
+struct ProjectileDouble {
+    double x;
+    double y;
+    int dx;
+    double dy;
+    uint8_t player_id;
+
+    ProjectileDouble(Projectile p, uint8_t player_id)
+        : x {static_cast<double>(p.x)}, y {static_cast<double>(p.y)},
+          dx {p.dx >= 0 ? (p.dx > 0 ? 1 : 0) : -1},
+          dy {static_cast<double>(p.dy) / std::abs(p.dx)},
+          player_id {player_id} {}
+    
+    void move() {
+        x += dx;
+        y += dy;
+    }
+};
+
+
 std::ostream &operator<<(std::ostream &os, const ENetAddress &e) {
     os << e.host << ':' << e.port;
     return os;
@@ -92,7 +113,7 @@ void parse_client_shoot(const ENetEvent &event, std::vector<ProjectileDouble> &p
         event.packet->data[12],
     };
     Projectile p {deserialize_projectile(projectile_data)};
-    ProjectileDouble pd {p};
+    ProjectileDouble pd {p, static_cast<ClientData *>(event.peer->data)->p.id};
 
     std::cout << "Shooting projectile: " << pd.x << ", " << pd.y << ", " << p.dx << ", " << p.dy << '\n';
 
@@ -112,7 +133,7 @@ void parse_event(const ENetEvent &event, std::vector<ProjectileDouble> &projecti
     }
 }
 
-void run_game_tick(std::map<int, ClientData> &players, const std::vector<Obstacle> &obstacles, std::vector<ProjectileDouble> &projectiles) {
+std::map<uint8_t, uint8_t> run_game_tick(std::map<int, ClientData> &players, const std::vector<Obstacle> &obstacles, std::vector<ProjectileDouble> &projectiles) {
     for (auto &[id, data] : players) {
         if (data.player_movement == std::make_pair<short, short>(0, 0))
             continue;
@@ -145,22 +166,38 @@ void run_game_tick(std::map<int, ClientData> &players, const std::vector<Obstacl
         if (actual_movement != std::make_pair<short, short>(0, 0))
             std::cout << "Player moved to " << id << ": " << data.p.x << ", " << data.p.y << '\n';
     }
+    std::map<uint8_t, uint8_t> dead_players;
     std::vector<uint16_t> projectiles_to_remove;
     projectiles_to_remove.reserve(projectiles.size());
     uint16_t idx = 0;
     for (auto &p : projectiles) {
         p.move();
         p.move();
-        if (p.x > max_x || p.y > max_y || p.x < min_x || p.y < min_y ||
+        Player player_that_got_hit;
+        bool hit_player = std::any_of(
+            players.begin(), players.end(),
+            [p, &player_that_got_hit](const std::pair<uint8_t, ClientData> &data) {
+                if (point_in_rect(data.second.p.x, data.second.p.y, player_size * 2, player_size * 2, p.x, p.y)) {
+                    player_that_got_hit = data.second.p;
+                    return true;
+                }
+                return false;
+        });
+        if (p.x > max_x || p.y > max_y || p.x < min_x || p.y < min_y || (hit_player && player_that_got_hit.id != p.player_id) ||
             std::any_of(obstacles.begin(), obstacles.end(), 
                         [p](Obstacle ob) { return point_in_rect(ob.x, ob.y, ob.width * 2, ob.height * 2, p.x, p.y); })
         ) {
             projectiles_to_remove.push_back(idx);
+            if (hit_player) {
+                // someone got hit and died
+                dead_players[player_that_got_hit.id] = p.player_id;
+            }
         }
         idx++;
     }
     for (auto idx : projectiles_to_remove)
         projectiles.erase(projectiles.begin() + idx);
+    return dead_players;
 }
 
 int main(int argv, char **argc) {
@@ -299,7 +336,16 @@ int main(int argv, char **argc) {
         auto elapsed_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_time).count();
         if (elapsed_time_ms >= tick_rate_ms || is_within(elapsed_time_ms, tick_rate_ms, 1)) {
             last_time = now;
-            run_game_tick(players, obstacles, projectiles);
+            auto dead_players = run_game_tick(players, obstacles, projectiles);
+            for (auto [killed, killer] : dead_players) {
+                players.erase(killed);
+                std::vector<uint8_t> data_to_send {
+                    static_cast<uint8_t>(MessageToClientTypes::PlayerKilled),
+                    killer,
+                    killed
+                };
+                broadcast_packet(server, data_to_send, channel_events);
+            }
 
             std::vector<Player> players_to_update;
             players_to_update.reserve(players.size());
