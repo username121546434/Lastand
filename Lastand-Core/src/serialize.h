@@ -51,7 +51,9 @@ enum class MessageToClientTypes: uint8_t {
     PlayerWon = 5, // a player has won
     PlayerKilled = 6, // a player has killed another player
     // sent when a player joins late
-    PreviousGameData = 7
+    PreviousGameData = 7,
+    // projectiles have moved
+    UpdateProjectiles = 8
 };
 
 enum class ObjectType: uint8_t {

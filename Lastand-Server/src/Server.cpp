@@ -293,11 +293,24 @@ int main(int argv, char **argc) {
                 players_to_update.push_back(player_data.p);
             }
 
-            if (players_to_update.empty())
-                continue;
-            std::vector<uint8_t> data_to_send {serialize_game_player_positions(players_to_update)};
-            data_to_send.insert(data_to_send.cbegin(), static_cast<uint8_t>(MessageToClientTypes::UpdatePlayerPositions));
-            broadcast_packet(server, data_to_send, channel_updates);
+            if (!players_to_update.empty()) {
+                std::vector<uint8_t> data_to_send {serialize_game_player_positions(players_to_update)};
+                data_to_send.insert(data_to_send.cbegin(), static_cast<uint8_t>(MessageToClientTypes::UpdatePlayerPositions));
+                broadcast_packet(server, data_to_send, channel_updates);
+            }
+
+            if (!projectiles.empty()) {
+                std::vector<uint8_t> projectile_data;
+                projectile_data.reserve(2 + projectiles.size() * sizeof(Projectile));
+                projectile_data.push_back(static_cast<uint8_t>(MessageToClientTypes::UpdateProjectiles));
+                projectile_data.push_back(static_cast<uint8_t>(projectiles.size()));
+                for (auto &pd: projectiles) {
+                    Projectile p {static_cast<uint16_t>(pd.x), static_cast<uint16_t>(pd.y), pd.dx, static_cast<int32_t>(pd.dy)};
+                    auto p_data = serialize_projectile(p);
+                    projectile_data.insert(projectile_data.end(), p_data.cbegin(), p_data.cend());
+                }
+                broadcast_packet(server, projectile_data, channel_updates);
+            }
         }
     }
 
