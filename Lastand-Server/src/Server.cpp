@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <enet/enet.h>
@@ -41,14 +42,14 @@ struct ClientData {
 struct ProjectileDouble {
     double x;
     double y;
-    int dx;
+    double dx;
     double dy;
     uint8_t player_id;
 
     ProjectileDouble(Projectile p, uint8_t player_id)
         : x {static_cast<double>(p.x)}, y {static_cast<double>(p.y)},
-          dx {p.dx >= 0 ? (p.dx > 0 ? 1 : 0) : -1},
-          dy {static_cast<double>(p.dy) / std::abs(p.dx)},
+          dx {p.dx / std::sqrt(std::pow(p.dx, 2) + std::pow(p.dy, 2))},
+          dy {std::sqrt(1 - dx * dx) * (p.dy < 0 ? -1 : 1)},
           player_id {player_id} {}
     
     void move() {
@@ -381,7 +382,7 @@ int main(int argv, char **argc) {
                 projectile_data.push_back(static_cast<uint8_t>(MessageToClientTypes::UpdateProjectiles));
                 projectile_data.push_back(static_cast<uint8_t>(projectiles.size()));
                 for (auto &pd: projectiles) {
-                    Projectile p {static_cast<uint16_t>(pd.x), static_cast<uint16_t>(pd.y), pd.dx, static_cast<int32_t>(pd.dy)};
+                    Projectile p {static_cast<uint16_t>(pd.x), static_cast<uint16_t>(pd.y), static_cast<int32_t>(pd.dx), static_cast<int32_t>(pd.dy)};
                     auto p_data = serialize_projectile(p);
                     projectile_data.insert(projectile_data.end(), p_data.cbegin(), p_data.cend());
                 }
