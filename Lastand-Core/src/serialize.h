@@ -52,7 +52,8 @@ enum class MessageToClientTypes: uint8_t {
     // sent when a player joins late
     PreviousGameData = 6,
     // projectiles have moved
-    UpdateProjectiles = 7
+    UpdateProjectiles = 7,
+    GameStarted = 8
 };
 
 enum class ObjectType: uint8_t {

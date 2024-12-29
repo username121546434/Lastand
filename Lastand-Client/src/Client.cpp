@@ -177,6 +177,9 @@ void parse_message_from_server(const std::vector<uint8_t> &data, std::map<int, P
             std::cout << player_data.at(killer).username << " has killed " << player_data.at(killed).username << std::endl;
             player_data.erase(killed);
         }
+        case MessageToClientTypes::GameStarted: {
+            std::cout << "The game has started!" << std::endl;
+        }
     }
 }
 

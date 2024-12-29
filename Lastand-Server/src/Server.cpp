@@ -355,8 +355,10 @@ int main(int argv, char **argc) {
         auto elapsed_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_time).count();
         if (!game_started) {
             game_started = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count() >= time_for_game_to_start_ms;
-            if (game_started)
+            if (game_started) {
                 std::cout << "The game has started!" << std::endl;
+                broadcast_packet(server, {static_cast<uint8_t>(MessageToClientTypes::GameStarted)}, channel_events);
+            }
         }
         if (elapsed_time_ms >= tick_rate_ms || is_within(elapsed_time_ms, tick_rate_ms, 1)) {
             last_time = now;
