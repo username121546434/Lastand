@@ -14,6 +14,7 @@
 #include <vector>
 #include "serialize.h"
 #include <map>
+#include "imgui.h"
 
 void draw_player(SDL_Renderer *renderer, const Player &p) {
     SDL_FRect frect {static_cast<float>(p.x / 2.0), static_cast<float>(p.y / 2.0), player_size, player_size};

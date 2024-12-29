@@ -7,6 +7,7 @@ endif()
 target_compile_definitions(Lastand-Client PRIVATE $<$<CONFIG:Debug>:DEBUG>)
 
 add_subdirectory(../ext/SDL3 EXLUDE_FROM_ALL)
+add_subdirectory(../ext/ImGui build)
 
 # Include directories
 target_include_directories(Lastand-Client PRIVATE 
@@ -14,6 +15,7 @@ target_include_directories(Lastand-Client PRIVATE
     ../Lastand-Core/src
     ../ext/SDL3/include
     ../ext/enet/include
+    ../ext/ImGui/imgui
 )
 
 # Link libraries
@@ -21,6 +23,7 @@ target_link_libraries(Lastand-Client PRIVATE
     Lastand-Core 
     SDL3::SDL3
     enet
+    ImGui
 )
 
 if(MSVC)
