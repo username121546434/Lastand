@@ -125,14 +125,14 @@ void parse_client_shoot(const ENetEvent &event, std::vector<ProjectileDouble> &p
     projectiles.push_back(pd);
 }
 
-void parse_event(const ENetEvent &event, std::vector<ProjectileDouble> &projectiles) {
+void parse_event(const ENetEvent &event, std::vector<ProjectileDouble> &projectiles, bool game_started) {
     if (event.channelID == channel_updates) {
         MessageToServerTypes event_type {event.packet->data[0]};
         assert(event_type == MessageToServerTypes::ClientMove || event_type == MessageToServerTypes::Shoot);
 
         if (event_type == MessageToServerTypes::ClientMove){
             parse_client_move(event);
-        } else if (event_type == MessageToServerTypes::Shoot) {
+        } else if (event_type == MessageToServerTypes::Shoot && game_started) {
             parse_client_shoot(event, projectiles);
         }
     }
@@ -237,11 +237,13 @@ int main(int argv, char **argc) {
     bool running = true;
     ENetEvent event;
     std::cout << "hosting on port " << address.port << std::endl;
+    bool game_started = false;
 
     // map3 kind of looks cool
     // map5 has a big wall
     const std::vector<Obstacle> obstacles {load_from_file("maps/map2.txt")};
     std::cout << "Loaded " << obstacles.size() << " obstacles" << std::endl;
+    // whether the server should send a list of empty projectiles
     bool sent_empty_projectiles = false;
 
 #if defined(DEBUG)
@@ -254,6 +256,7 @@ int main(int argv, char **argc) {
 #endif
 
     auto last_time = std::chrono::high_resolution_clock::now();
+    auto start_time = last_time;
 
     while (running) {
         int err = enet_host_service(server, &event, tick_rate_ms);
@@ -332,7 +335,7 @@ int main(int argv, char **argc) {
                         << "was received from " << event.peer->address << " "
                         << "from channel " << static_cast<int>(event.channelID) << std::endl;
 #endif
-                parse_event(event, projectiles);
+                parse_event(event, projectiles, game_started);
                 break;
             }
             case ENET_EVENT_TYPE_DISCONNECT: {
@@ -350,6 +353,11 @@ int main(int argv, char **argc) {
         }
         auto now = std::chrono::high_resolution_clock::now();
         auto elapsed_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_time).count();
+        if (!game_started) {
+            game_started = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count() >= time_for_game_to_start_ms;
+            if (game_started)
+                std::cout << "The game has started!" << std::endl;
+        }
         if (elapsed_time_ms >= tick_rate_ms || is_within(elapsed_time_ms, tick_rate_ms, 1)) {
             last_time = now;
             auto dead_players = run_game_tick(players, obstacles, projectiles);
