@@ -1,4 +1,5 @@
 #include <SDL3/SDL.h>
+#include "Obstacle.h"
 #include "Player.h"
 #include <array>
 #include <cassert>
@@ -8,13 +9,18 @@
 #include <SDL3/SDL_main.h>
 #include "Projectile.h"
 #include "SDL3/SDL_events.h"
+#include "SDL3/SDL_video.h"
 #include "constants.h"
 #include <enet/enet.h>
+#include <tuple>
 #include <utility>
 #include <vector>
 #include "serialize.h"
 #include <map>
 #include "imgui.h"
+#include "imgui_impl_sdl3.h"
+#include "imgui_impl_sdlrenderer3.h"
+#include "imgui_stdlib.h"
 
 void draw_player(SDL_Renderer *renderer, const Player &p) {
     SDL_FRect frect {static_cast<float>(p.x / 2.0), static_cast<float>(p.y / 2.0), player_size, player_size};
@@ -81,6 +87,16 @@ ClientMovement create_client_movement(SDL_Scancode key) {
             m = ClientMovement::None;
     }
     return m;
+}
+
+std::vector<uint8_t> handle_key_down(SDL_Scancode key) {
+    auto movement = create_client_movement(key);
+    std::vector<uint8_t> msg {
+        static_cast<uint8_t>(MessageToServerTypes::ClientMove),
+        static_cast<uint8_t>(ClientMovementTypes::Start),
+        static_cast<uint8_t>(movement)
+    };
+    return msg;
 }
 
 std::vector<uint8_t> handle_key_down(SDL_Scancode key, std::pair<short, short> &player_delta) {
@@ -237,6 +253,33 @@ std::pair<std::map<int, Player>, std::vector<Obstacle>> get_previous_game_data(E
     }
 }
 
+std::tuple<Player, std::map<int, Player>, std::vector<Obstacle>, ENetPeer*> connect_to_server(ENetHost *client, const std::string &server_addr, int port) {
+    ENetAddress address;
+    ENetEvent enet_event;
+    
+    enet_address_set_host(&address, server_addr.c_str());
+    address.port = port;
+    ENetPeer *server {enet_host_connect(client, &address, num_channels, 0)};
+    if (server == NULL) {
+        std::cerr << "Failed to connect to peer" << std::endl;
+        std::exit(1);
+    }
+
+    if (enet_host_service(client, &enet_event, 5000) > 0 && enet_event.type == ENET_EVENT_TYPE_CONNECT) {
+        std::cout << "Connection to " << server_addr << ":" << address.port << " success" << std::endl;
+    } else {
+        enet_peer_reset(server);
+        std::cout << "Connection to " << server_addr << ":" << address.port << " failed" << std::endl;
+    }
+
+    // get player data
+    Player this_player = get_this_player(client);
+
+    // get previous game data
+    auto [players, obstacles] = get_previous_game_data(client);
+    return {this_player, players, obstacles, server};
+}
+
 int main(int argv, char **argc) {
     if (enet_initialize() != 0) {
         std::cerr << "An error occurred while initializing Enet!" << std::endl;
@@ -268,8 +311,17 @@ int main(int argv, char **argc) {
         return 1;
     }
 
-    std::string server_addr {"127.0.0.1"};
-    int port {8888};
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO &io {ImGui::GetIO()};
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    ImGui::StyleColorsDark();
+
+    ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
+    ImGui_ImplSDLRenderer3_Init(renderer);
+
+    std::string server_addr;
+    int port {};
 
     for (int i {0}; i < argv; i++)
         std::cout << argc[i] << std::endl;
@@ -280,58 +332,64 @@ int main(int argv, char **argc) {
     } else if (argv == 2)
         port = std::stoi(argc[1]);
 
-    ENetAddress address;
-    ENetEvent enet_event;
-    
-    enet_address_set_host(&address, server_addr.c_str());
-    address.port = port;
-    ENetPeer *server {enet_host_connect(client, &address, num_channels, 0)};
-    if (server == NULL) {
-        std::cerr << "Failed to connect to peer" << std::endl;
-        return EXIT_FAILURE;
-    }
-
-    if (enet_host_service(client, &enet_event, 5000) > 0 && enet_event.type == ENET_EVENT_TYPE_CONNECT) {
-        std::cout << "Connection to " << server_addr << ":" << address.port << " success" << std::endl;
-    } else {
-        enet_peer_reset(server);
-        std::cout << "Connection to " << server_addr << ":" << address.port << " failed" << std::endl;
-    }
-
-    // get player data
-    Player this_player = get_this_player(client);
-
-    // get previous game data
-    auto [players, obstacles] = get_previous_game_data(client);
 
     std::pair<short, short> player_movement;
     std::vector<Projectile> projectiles;
-    players[this_player.id] = this_player;
+    ImVec4 player_color {1.0f, 1.0f, 1.0f, 1.0f};
+    char username[15] = "";
+    bool connected_to_server = false;
 
-    for (const auto &o : obstacles) {
-        std::cout << "Received obstacle at: (" << o.x << ", " << o.y << ") (" << o.width << ", " << o.height << ")"
-            << "(" << (int)o.color.r << ", " << (int)o.color.g << ", " << (int)o.color.b << ", " << (int)o.color.a << ")" << std::endl;
-    }
+    // the player the client is controlling
+    Player local_player;
+    std::map<int, Player> players;
+    ENetPeer *server {nullptr};
+    std::vector<Obstacle> obstacles;
 
     bool running = true;
     SDL_Event event;
     while (running) {
         while (SDL_PollEvent(&event)) {
+            ImGui_ImplSDL3_ProcessEvent(&event);
             if (event.type == SDL_EVENT_QUIT)
                 running = false;
-            auto old_player_movement {player_movement};
-            auto data_to_send {process_event(event, player_movement, players[this_player.id].x, players[this_player.id].y)};
-            if (!data_to_send.empty() && (player_movement != old_player_movement || event.type == SDL_EVENT_MOUSE_BUTTON_UP)) {
-                std::cout << "Sending data: " << data_to_send << std::endl;
-                send_packet(server, data_to_send, channel_updates);
+            else if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && event.window.windowID == SDL_GetWindowID(window))
+                running = false;
+            else if (connected_to_server) {
+                auto last_movement = player_movement;
+                std::vector<uint8_t> data_to_send {process_event(event, player_movement, local_player.x, local_player.y)};
+                if (!data_to_send.empty() && player_movement != last_movement) {
+                    send_packet(server, data_to_send, channel_updates);
+                }
             }
         }
+        
+        ImGui_ImplSDLRenderer3_NewFrame();
+        ImGui_ImplSDL3_NewFrame();
+        ImGui::NewFrame();
 
-        while (enet_host_service(client, &enet_event, tick_rate_ms) > 0) {
-            switch (enet_event.type) {
+        if (!connected_to_server) {
+            ImGui::Begin("Enter your details");
+            ImGui::ColorEdit4("Choose your color", (float*)&player_color);
+            ImGui::InputTextWithHint("Username", "Enter username", username, 15);
+            ImGui::InputTextWithHint("Input server address", "Enter server address", &server_addr);
+            ImGui::InputInt("Input server port", &port);
+
+            std::cout << "Username: " << username << std::endl;
+            std::cout << "Server address: " << server_addr << std::endl;
+            std::cout << "Port: " << port << std::endl;
+            if (ImGui::Button("Connect to the server")) {
+                connected_to_server = true;
+                std::tie(local_player, players, obstacles, server) = connect_to_server(client, server_addr, port);
+                players[local_player.id] = local_player;
+            }
+            ImGui::End();
+        } else {
+            ENetEvent enet_event;
+            while (enet_host_service(client, &enet_event, tick_rate_ms) > 0) {
+                switch (enet_event.type) {
                 case ENET_EVENT_TYPE_RECEIVE: {
                     std::vector<uint8_t> data;
-                    for (int i {0}; i < enet_event.packet->dataLength; i++)
+                    for (int i{0}; i < enet_event.packet->dataLength; i++)
                         data.push_back(enet_event.packet->data[i]);
                     std::cout << "Received data: " << data << " on channel: " << (int)enet_event.channelID << '\n';
                     parse_message_from_server(data, players, projectiles);
@@ -339,11 +397,16 @@ int main(int argv, char **argc) {
                 }
                 default:
                     break;
+                }
             }
         }
 
+
+        ImGui::Render();
+
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
+        ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
 
         for (const auto &[id, player] : players)
             draw_player(renderer, player);
@@ -359,7 +422,7 @@ int main(int argv, char **argc) {
 
 
     enet_peer_disconnect(server, 0);
-
+    ENetEvent enet_event;
     while (enet_host_service(client, &enet_event, 500) > 0) {
         switch (enet_event.type) {
             case ENET_EVENT_TYPE_RECEIVE:
@@ -375,7 +438,11 @@ int main(int argv, char **argc) {
 
     std::cout << "Disconnected from server" << std::endl;
 
-    enet_deinitialize();
+    ImGui_ImplSDL3_Shutdown();
+    ImGui_ImplSDLRenderer3_Shutdown();
+    ImGui::DestroyContext();
+
+    // enet_deinitialize();
     SDL_DestroyWindow(window);
     SDL_DestroyRenderer(renderer);
     SDL_Quit();
