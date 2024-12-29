@@ -11,5 +11,8 @@ target_sources(ImGui PRIVATE
     imgui/imgui_demo.cpp
     imgui/backends/imgui_impl_sdl3.cpp
     imgui/backends/imgui_impl_sdlrenderer3.cpp
+    imgui/misc/cpp/imgui_stdlib.cpp
 )
+
+target_link_libraries(ImGui PUBLIC SDL3::SDL3)
 

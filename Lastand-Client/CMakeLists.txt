@@ -16,6 +16,7 @@ target_include_directories(Lastand-Client PRIVATE
     ../ext/SDL3/include
     ../ext/enet/include
     ../ext/ImGui/imgui
+    ../ext/ImGui/imgui/misc/cpp
 )
 
 # Link libraries
