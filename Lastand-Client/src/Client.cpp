@@ -25,7 +25,7 @@
 void draw_player(SDL_Renderer *renderer, const Player &p) {
     SDL_FRect frect {static_cast<float>(p.x / 2.0), static_cast<float>(p.y / 2.0), player_size, player_size};
     bool success;
-    success = SDL_SetRenderDrawColor(renderer, p.color.r, p.color.g, p.color.g, p.color.a);
+    success = SDL_SetRenderDrawColor(renderer, p.color.r, p.color.g, p.color.b, p.color.a);
     if (!success) std::cerr << "Error in SDL_SetRenderDrawColor: " << SDL_GetError();
     success = SDL_RenderFillRect(renderer, &frect);
     if (!success) std::cerr << "Error in SDL_RenderFillRect: " << SDL_GetError();
