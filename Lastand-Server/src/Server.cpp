@@ -125,15 +125,48 @@ void parse_client_shoot(const ENetEvent &event, std::vector<ProjectileDouble> &p
     projectiles.push_back(pd);
 }
 
-void parse_event(const ENetEvent &event, std::vector<ProjectileDouble> &projectiles, bool game_started) {
+void set_client_attributes(const ENetEvent &event, std::map<int, ClientData> &players) {
+    SetClientAttributesTypes attribute_type {event.packet->data[1]};
+    ClientData &cd {*static_cast<ClientData *>(event.peer->data)};
+    auto id = cd.p.id;
+    switch (attribute_type) {
+        case SetClientAttributesTypes::Username: {
+            std::string username;
+            int username_len = event.packet->data[2];
+            for (int i {3}; i < username_len + 3; i++)
+                username.push_back(event.packet->data[i]);
+            players.at(id).p.username = username;
+            std::cout << "Set username of " << (int)cd.p.id << " to: " << username << '\n';
+            break;
+        }
+        case SetClientAttributesTypes::Color: {
+            Color c {event.packet->data[2], event.packet->data[3], event.packet->data[4], event.packet->data[5]};
+            players.at(id).p.color = c;
+            std::cout << "Set color of " << (int)cd.p.id << " to: (" << (int)c.r << ", " << (int)c.g << ", " << (int)c.b << ", " << (int)c.a << ")\n";
+            break;
+        }
+        default:
+            std::cerr << "Attribute type not recognized: " << (int)attribute_type << std::endl;
+    }
+}
+
+void parse_event(const ENetEvent &event, std::vector<ProjectileDouble> &projectiles, std::map<int, ClientData> &players, bool game_started) {
+    MessageToServerTypes event_type {event.packet->data[0]};
     if (event.channelID == channel_updates) {
-        MessageToServerTypes event_type {event.packet->data[0]};
-        assert(event_type == MessageToServerTypes::ClientMove || event_type == MessageToServerTypes::Shoot);
+        assert(
+            event_type == MessageToServerTypes::ClientMove ||
+            event_type == MessageToServerTypes::Shoot
+        );
+        std::cout << "Received event type: " << (int)event_type << std::endl;
 
         if (event_type == MessageToServerTypes::ClientMove){
             parse_client_move(event);
-        } else if (event_type == MessageToServerTypes::Shoot && game_started) {
+        } else if (event_type == MessageToServerTypes::Shoot && game_started)
             parse_client_shoot(event, projectiles);
+    } else if (event.channelID == channel_user_updates) {
+        assert(event_type == MessageToServerTypes::SetClientAttributes);
+        if (event_type == MessageToServerTypes::SetClientAttributes) {
+            set_client_attributes(event, players);
         }
     }
 }
@@ -335,7 +368,7 @@ int main(int argv, char **argc) {
                         << "was received from " << event.peer->address << " "
                         << "from channel " << static_cast<int>(event.channelID) << std::endl;
 #endif
-                parse_event(event, projectiles, game_started);
+                parse_event(event, projectiles, players, game_started);
                 break;
             }
             case ENET_EVENT_TYPE_DISCONNECT: {

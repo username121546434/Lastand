@@ -15,6 +15,11 @@ enum class MessageToServerTypes: uint8_t {
     Shoot = 2, // when the player shoots a projectile
 };
 
+enum class SetClientAttributesTypes: uint8_t {
+    Username = 0,
+    Color = 1
+};
+
 enum class ClientMovementTypes: uint8_t {
     Start = 0, // when player presses down on an input
     Stop = 1 // when player releases an input

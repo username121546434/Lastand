@@ -383,6 +383,23 @@ int main(int argv, char **argc) {
                 connected_to_server = true;
                 std::tie(local_player, players, obstacles, server) = connect_to_server(client, server_addr, port);
                 players[local_player.id] = local_player;
+                // send username and color to server
+                std::vector<uint8_t> color_change {
+                    static_cast<uint8_t>(MessageToServerTypes::SetClientAttributes),
+                    static_cast<uint8_t>(SetClientAttributesTypes::Color),
+                    static_cast<uint8_t>(player_color.x * 255),
+                    static_cast<uint8_t>(player_color.y * 255),
+                    static_cast<uint8_t>(player_color.z * 255),
+                    static_cast<uint8_t>(player_color.w * 255)
+                };
+                send_packet(server, color_change, channel_user_updates);
+                std::vector<uint8_t> username_change {
+                    static_cast<uint8_t>(MessageToServerTypes::SetClientAttributes),
+                    static_cast<uint8_t>(SetClientAttributesTypes::Username),
+                    static_cast<uint8_t>(strlen(username))
+                };
+                username_change.insert(username_change.end(), username, username + strlen(username));
+                send_packet(server, username_change, channel_user_updates);
             }
             ImGui::End();
         } else {
