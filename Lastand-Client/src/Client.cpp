@@ -199,6 +199,27 @@ void parse_message_from_server(const std::vector<uint8_t> &data, std::map<int, P
         case MessageToClientTypes::GameStarted: {
             std::cout << "The game has started!" << std::endl;
         }
+        case MessageToClientTypes::SetPlayerAttributes: {
+            SetPlayerAttributesTypes attribute_type = static_cast<SetPlayerAttributesTypes>(data_without_type[0]);
+            auto player_id = data_without_type[1];
+            std::cout << "Player " << (int)player_id << " " << (int)attribute_type << std::endl;
+            switch (attribute_type) {
+                case SetPlayerAttributesTypes::UsernameChanged: {
+                    std::string username {data_without_type.begin() + 3, data_without_type.end()};
+                    std::cout << "Set username of " << (int)player_id << " to: " << username << '\n';
+                    player_data.at(player_id).username = username;
+                    break;
+                }
+                case SetPlayerAttributesTypes::ColorChanged: {
+                    Color c {data_without_type[2], data_without_type[3], data_without_type[4], data_without_type[5]};
+                    player_data.at(player_id).color = c;
+                    std::cout << "Set color of " << (int)player_id << " to: (" << (int)c.r << ", " << (int)c.g << ", " << (int)c.b << ", " << (int)c.a << ")\n";
+                    break;
+                }
+                default:
+                    std::cerr << "Attribute type not recognized: " << (int)attribute_type << std::endl;
+            }
+        }
     }
 }
 
@@ -386,7 +407,7 @@ int main(int argv, char **argc) {
                 // send username and color to server
                 std::vector<uint8_t> color_change {
                     static_cast<uint8_t>(MessageToServerTypes::SetClientAttributes),
-                    static_cast<uint8_t>(SetClientAttributesTypes::Color),
+                    static_cast<uint8_t>(SetPlayerAttributesTypes::ColorChanged),
                     static_cast<uint8_t>(player_color.x * 255),
                     static_cast<uint8_t>(player_color.y * 255),
                     static_cast<uint8_t>(player_color.z * 255),
@@ -395,7 +416,7 @@ int main(int argv, char **argc) {
                 send_packet(server, color_change, channel_user_updates);
                 std::vector<uint8_t> username_change {
                     static_cast<uint8_t>(MessageToServerTypes::SetClientAttributes),
-                    static_cast<uint8_t>(SetClientAttributesTypes::Username),
+                    static_cast<uint8_t>(SetPlayerAttributesTypes::UsernameChanged),
                     static_cast<uint8_t>(strlen(username))
                 };
                 username_change.insert(username_change.end(), username, username + strlen(username));

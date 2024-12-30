@@ -126,23 +126,38 @@ void parse_client_shoot(const ENetEvent &event, std::vector<ProjectileDouble> &p
 }
 
 void set_client_attributes(const ENetEvent &event, std::map<int, ClientData> &players) {
-    SetClientAttributesTypes attribute_type {event.packet->data[1]};
+    SetPlayerAttributesTypes attribute_type {event.packet->data[1]};
     ClientData &cd {*static_cast<ClientData *>(event.peer->data)};
     auto id = cd.p.id;
     switch (attribute_type) {
-        case SetClientAttributesTypes::Username: {
+        case SetPlayerAttributesTypes::UsernameChanged: {
             std::string username;
             int username_len = event.packet->data[2];
             for (int i {3}; i < username_len + 3; i++)
                 username.push_back(event.packet->data[i]);
             players.at(id).p.username = username;
             std::cout << "Set username of " << (int)cd.p.id << " to: " << username << '\n';
+            std::vector<uint8_t> data_to_send {
+                static_cast<uint8_t>(MessageToClientTypes::SetPlayerAttributes),
+                static_cast<uint8_t>(SetPlayerAttributesTypes::UsernameChanged),
+                static_cast<uint8_t>(id),
+                static_cast<uint8_t>(username_len),
+            };
+            data_to_send.insert(data_to_send.end(), username.begin(), username.end());
+            broadcast_packet(event.peer->host, data_to_send, channel_user_updates);
             break;
         }
-        case SetClientAttributesTypes::Color: {
+        case SetPlayerAttributesTypes::ColorChanged: {
             Color c {event.packet->data[2], event.packet->data[3], event.packet->data[4], event.packet->data[5]};
             players.at(id).p.color = c;
             std::cout << "Set color of " << (int)cd.p.id << " to: (" << (int)c.r << ", " << (int)c.g << ", " << (int)c.b << ", " << (int)c.a << ")\n";
+            std::vector<uint8_t> data_to_send {
+                static_cast<uint8_t>(MessageToClientTypes::SetPlayerAttributes),
+                static_cast<uint8_t>(SetPlayerAttributesTypes::ColorChanged),
+                static_cast<uint8_t>(id),
+                c.r, c.g, c.b, c.a
+            };
+            broadcast_packet(event.peer->host, data_to_send, channel_user_updates);
             break;
         }
         default:
