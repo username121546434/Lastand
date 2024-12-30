@@ -122,7 +122,9 @@ std::vector<uint8_t> handle_key_up(SDL_Scancode key, std::pair<short, short> &pl
 }
 
 std::vector<uint8_t> handle_mouse_up(uint16_t x, uint16_t y, SDL_MouseButtonEvent event) {
-    Projectile p {static_cast<uint16_t>(x + player_size), static_cast<uint16_t>(y + player_size), static_cast<int32_t>(event.x * 2) - x, static_cast<int32_t>(event.y * 2) - y};
+    y = static_cast<uint16_t>(y + player_size);
+    x = static_cast<uint16_t>(x + player_size);
+    Projectile p {x, y, static_cast<int32_t>(event.x * 2) - x, static_cast<int32_t>(event.y * 2) - y};
     std::cout << "Projectile: (" << p.x << ", " << p.y << ")(" << p.dx << ", " << p.dy << ")\n";
     auto data = serialize_projectile(p);
     std::vector<uint8_t> msg {
@@ -356,8 +358,8 @@ int main(int argv, char **argc) {
                 running = false;
             else if (connected_to_server) {
                 auto last_movement = player_movement;
-                std::vector<uint8_t> data_to_send {process_event(event, player_movement, local_player.x, local_player.y)};
-                if (!data_to_send.empty() && player_movement != last_movement) {
+                std::vector<uint8_t> data_to_send {process_event(event, player_movement, players.at(local_player.id).x, players.at(local_player.id).y)};
+                if (!data_to_send.empty() && (player_movement != last_movement || event.type == SDL_EVENT_MOUSE_BUTTON_UP)) {
                     send_packet(server, data_to_send, channel_updates);
                 }
             }
