@@ -9,6 +9,7 @@
 #include <SDL3/SDL_main.h>
 #include "Projectile.h"
 #include "SDL3/SDL_events.h"
+#include "SDL3/SDL_timer.h"
 #include "SDL3/SDL_video.h"
 #include "constants.h"
 #include <enet/enet.h>
@@ -21,6 +22,8 @@
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
 #include "imgui_stdlib.h"
+
+const uint16_t window_height {window_size + 100};
 
 void draw_player(SDL_Renderer *renderer, const Player &p) {
     SDL_FRect frect {static_cast<float>(p.x / 2.0), static_cast<float>(p.y / 2.0), player_size, player_size};
@@ -325,7 +328,7 @@ int main(int argv, char **argc) {
 
     SDL_Window *window {nullptr};
     SDL_Renderer *renderer {nullptr};
-    SDL_CreateWindowAndRenderer(window_title.c_str(), window_size, window_size, SDL_WINDOW_MAXIMIZED, &window, &renderer);
+    SDL_CreateWindowAndRenderer(window_title.c_str(), window_size, window_height, SDL_WINDOW_MAXIMIZED, &window, &renderer);
 
     if (!window || window == NULL) {
         std::cerr << "Failed to create window: " << SDL_GetError() << std::endl;
@@ -361,6 +364,7 @@ int main(int argv, char **argc) {
 
     std::pair<short, short> player_movement;
     std::vector<Projectile> projectiles;
+    auto last_time = SDL_GetTicks();
     ImVec4 player_color {1.0f, 1.0f, 1.0f, 1.0f};
     char username[15] = "";
     bool connected_to_server = false;
@@ -439,6 +443,9 @@ int main(int argv, char **argc) {
                     break;
                 }
             }
+            ImGui::Begin("Game");
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+            ImGui::End();
         }
 
 
@@ -458,6 +465,8 @@ int main(int argv, char **argc) {
             draw_projectile(renderer, p);
 
         SDL_RenderPresent(renderer);
+        if (SDL_GetTicks() - last_time < tick_rate_ms)
+            SDL_Delay(tick_rate_ms - (SDL_GetTicks() - last_time));
     }
 
 
