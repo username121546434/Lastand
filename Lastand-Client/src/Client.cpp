@@ -34,6 +34,17 @@ void draw_player(SDL_Renderer *renderer, const Player &p) {
     if (!success) std::cerr << "Error in SDL_RenderFillRect: " << SDL_GetError();
 }
 
+void draw_player_username(const Player &p) {
+    ImGui::SetNextWindowPos(ImVec2(p.x / 2.0 - 10, p.y / 2.0 - 20));
+    ImGui::Begin((p.username + "Username").c_str(), nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings);
+    std::string username_to_display = p.username;
+    if (ImGui::CalcTextSize(username_to_display.c_str()).x > 30)
+        username_to_display = username_to_display.substr(0, 5) + "...";
+    std::cout << "Drawing username: " << username_to_display << '\n';
+    ImGui::Text("%s", username_to_display.c_str());
+    ImGui::End();
+}
+
 void draw_obstacle(SDL_Renderer *renderer, const Obstacle &o) {
     SDL_FRect frect {
         static_cast<float>(o.x / 2.0),
@@ -448,21 +459,23 @@ int main(int argv, char **argc) {
             ImGui::End();
         }
 
-
-        ImGui::Render();
-
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
-        ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
 
-        for (const auto &[id, player] : players)
+        for (const auto &[id, player] : players) {
             draw_player(renderer, player);
+            std::cout << "Drawing player: " << player.username << " at: " << player.x << ", " << player.y << '\n';
+            draw_player_username(player);
+        }
         
         for (const auto &obstacle : obstacles)
             draw_obstacle(renderer, obstacle);
 
         for (auto p : projectiles)
             draw_projectile(renderer, p);
+
+        ImGui::Render();
+        ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
 
         SDL_RenderPresent(renderer);
         if (SDL_GetTicks() - last_time < tick_rate_ms)
