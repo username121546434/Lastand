@@ -34,14 +34,15 @@ void draw_player(SDL_Renderer *renderer, const Player &p) {
     if (!success) std::cerr << "Error in SDL_RenderFillRect: " << SDL_GetError();
 }
 
-void draw_player_username(const Player &p) {
+void draw_player_username(const Player &p, ImFont *font) {
     ImGui::SetNextWindowPos(ImVec2(p.x / 2.0 - 10, p.y / 2.0 - 20));
     ImGui::Begin((p.username + "Username").c_str(), nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings);
     std::string username_to_display = p.username;
     if (ImGui::CalcTextSize(username_to_display.c_str()).x > 30)
         username_to_display = username_to_display.substr(0, 5) + "...";
-    std::cout << "Drawing username: " << username_to_display << '\n';
+    ImGui::PushFont(font);
     ImGui::Text("%s", username_to_display.c_str());
+    ImGui::PopFont();
     ImGui::End();
 }
 
@@ -355,6 +356,8 @@ int main(int argv, char **argc) {
     ImGui::CreateContext();
     ImGuiIO &io {ImGui::GetIO()};
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.Fonts->AddFontDefault();
+    ImFont *username_font = io.Fonts->AddFontFromFileTTF("fonts/Karla-Regular.ttf", 10.0f);
     ImGui::StyleColorsDark();
 
     ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
@@ -464,8 +467,7 @@ int main(int argv, char **argc) {
 
         for (const auto &[id, player] : players) {
             draw_player(renderer, player);
-            std::cout << "Drawing player: " << player.username << " at: " << player.x << ", " << player.y << '\n';
-            draw_player_username(player);
+            draw_player_username(player, username_font);
         }
         
         for (const auto &obstacle : obstacles)
