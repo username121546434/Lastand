@@ -357,7 +357,7 @@ int main(int argv, char **argc) {
     ImGuiIO &io {ImGui::GetIO()};
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.Fonts->AddFontDefault();
-    ImFont *username_font = io.Fonts->AddFontFromFileTTF("fonts/Karla-Regular.ttf", 10.0f);
+    ImFont *username_font = io.Fonts->AddFontFromFileTTF("fonts/ProggyClean.ttf", 9.0f);
     ImGui::StyleColorsDark();
 
     ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
