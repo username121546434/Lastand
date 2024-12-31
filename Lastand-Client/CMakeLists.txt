@@ -12,6 +12,9 @@ add_executable(Lastand-Client ${CLIENT_SOURCES}
 )
 if(MINGW)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++ -static-libgcc")
+    if(WIN32)
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mwindows")
+    endif()
 endif()
 target_compile_definitions(Lastand-Client PRIVATE $<$<CONFIG:Debug>:DEBUG>)
 
@@ -37,6 +40,7 @@ target_link_libraries(Lastand-Client PRIVATE
 
 if(MSVC)
     target_link_libraries(Lastand-Server PRIVATE ws2_32 winmm)
+    set(SUBSYSTEM_LINKER_OPTIONS "/SUBSYSTEM:WINDOWS")
 endif()
 
 # Handle copying SDL3 DLLs
