@@ -391,9 +391,11 @@ int main(int argv, char **argc) {
                 players_connected--;
                 ClientData *c = static_cast<ClientData *>(event.peer->data);
                 std::vector<uint8_t> broadcast_data {static_cast<uint8_t>(MessageToClientTypes::PlayerLeft), c->p.id};
-                players.erase(players.find(c->p.id));
-
-                broadcast_packet(server, broadcast_data, channel_events);
+                auto player = players.find(c->p.id);
+                if (player != players.end()) { // if the player is still alive in the game
+                    players.erase(player);
+                    broadcast_packet(server, broadcast_data, channel_events);
+                }
                 break;
             }
             case ENET_EVENT_TYPE_NONE:

@@ -415,7 +415,7 @@ int main(int argv, char **argc) {
                 running = false;
             else if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && event.window.windowID == SDL_GetWindowID(window))
                 running = false;
-            else if (connected_to_server) {
+            else if (connected_to_server && players.find(local_player.id) != players.end()) {
                 auto last_movement = player_movement;
                 std::vector<uint8_t> data_to_send {process_event(event, player_movement, players.at(local_player.id).x, players.at(local_player.id).y)};
                 if (!data_to_send.empty() && (player_movement != last_movement || event.type == SDL_EVENT_MOUSE_BUTTON_UP)) {
