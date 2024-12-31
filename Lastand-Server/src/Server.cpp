@@ -38,6 +38,7 @@ constexpr uint16_t max_obstacle_distance_travelled {500};
 
 struct ClientData {
     Player p;
+    bool ready = false;
     std::pair<short, short> player_movement;
 };
 
@@ -175,10 +176,13 @@ void set_client_attributes(const ENetEvent &event, std::map<int, ClientData> &pl
 void parse_event(const ENetEvent &event, std::vector<ProjectileDouble> &projectiles, std::map<int, ClientData> &players, bool game_started) {
     MessageToServerTypes event_type {event.packet->data[0]};
     if (event.channelID == channel_updates) {
-        assert(
+        if (!(
             event_type == MessageToServerTypes::ClientMove ||
             event_type == MessageToServerTypes::Shoot
-        );
+        )) {
+            std::cerr << "Event type not recognized: " << (int)event_type << " " << __FILE_NAME__ << ": " << __LINE__ << std::endl;
+            return;
+        }
         std::cout << "Received event type: " << (int)event_type << std::endl;
 
         if (event_type == MessageToServerTypes::ClientMove){
@@ -186,9 +190,21 @@ void parse_event(const ENetEvent &event, std::vector<ProjectileDouble> &projecti
         } else if (event_type == MessageToServerTypes::Shoot && game_started)
             parse_client_shoot(event, projectiles);
     } else if (event.channelID == channel_user_updates) {
-        assert(event_type == MessageToServerTypes::SetClientAttributes);
+        if (!(event_type == MessageToServerTypes::SetClientAttributes ||
+              event_type == MessageToServerTypes::ReadyUp ||
+              event_type == MessageToServerTypes::UnReady
+        )) {
+            std::cerr << "Event type not recognized: " << (int)event_type << " " << __FILE_NAME__ << ": " << __LINE__ << std::endl;
+            return;
+        }
         if (event_type == MessageToServerTypes::SetClientAttributes) {
             set_client_attributes(event, players);
+        } else if (event_type == MessageToServerTypes::ReadyUp) {
+            std::cout << "Player " << players.at(static_cast<ClientData *>(event.peer->data)->p.id).p.id << " is ready\n";
+            players.at(static_cast<ClientData *>(event.peer->data)->p.id).ready = true;
+        } else if (event_type == MessageToServerTypes::UnReady) {
+            std::cout << "Player " << players.at(static_cast<ClientData *>(event.peer->data)->p.id).p.id << " is not ready\n";
+            players.at(static_cast<ClientData *>(event.peer->data)->p.id).ready = false;
         }
     }
 }
@@ -323,12 +339,16 @@ int main(int argv, char **argc) {
         switch (event.type) {
             case ENET_EVENT_TYPE_CONNECT: {
                 std::cout << "A new client connected from: " << event.peer->address.host << ':' << event.peer->address.port << std::endl;
+                if (game_started) {
+                    enet_peer_disconnect(event.peer, 0);
+                    std::cout << "Game has already started, disconnecting new player" << std::endl;
+                }
                 players_connected++;
                 Player p {default_player};
                 p.username += std::to_string(new_player_id);
                 p.id = new_player_id;
                 p.color = random_color();
-                ClientData c {p, {0, 0}};
+                ClientData c {p, false, {0, 0}};
                 players[new_player_id] = c;
                 event.peer->data = &players.at(new_player_id);
 
@@ -412,7 +432,8 @@ int main(int argv, char **argc) {
         auto now = std::chrono::high_resolution_clock::now();
         auto elapsed_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_time).count();
         if (!game_started) {
-            game_started = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count() >= time_for_game_to_start_ms;
+            game_started = std::all_of(players.begin(), players.end(), [](const std::pair<int, ClientData> &data) { return data.second.ready; })
+                           && players_connected > 1;
             if (game_started) {
                 std::cout << "The game has started!" << std::endl;
                 broadcast_packet(server, {static_cast<uint8_t>(MessageToClientTypes::GameStarted)}, channel_events);

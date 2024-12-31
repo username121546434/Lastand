@@ -13,6 +13,8 @@ enum class MessageToServerTypes: uint8_t {
     ClientMove = 0, // input from player to go up, down, left, right
     SetClientAttributes = 1, // used for setting the username or color of player
     Shoot = 2, // when the player shoots a projectile
+    ReadyUp = 3, // when the player is ready to start the game
+    UnReady = 4 // when the player is not ready to start the game
 };
 
 enum class ClientMovementTypes: uint8_t {

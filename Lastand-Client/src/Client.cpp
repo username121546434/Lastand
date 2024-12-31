@@ -223,6 +223,7 @@ std::string parse_message_from_server(const std::vector<uint8_t> &data, std::map
         }
         case MessageToClientTypes::GameStarted: {
             std::cout << "The game has started!" << std::endl;
+            return "The game has started!";
             break;
         }
         case MessageToClientTypes::SetPlayerAttributes: {
@@ -396,6 +397,8 @@ int main(int argv, char **argc) {
     ImVec4 player_color {1.0f, 1.0f, 1.0f, 1.0f};
     char username[15] = "";
     bool connected_to_server = false;
+    bool game_started = false;
+    bool is_ready = false;
     
     std::string latest_event;
     auto latest_event_time = SDL_GetTicks();
@@ -472,6 +475,8 @@ int main(int argv, char **argc) {
                             latest_event = new_event;
                             latest_event_time = SDL_GetTicks();
                         }
+                        if (new_event == "The game has started!")
+                            game_started = true;
                         break;
                     }
                     default:
@@ -485,6 +490,24 @@ int main(int argv, char **argc) {
             if (SDL_GetTicks() - latest_event_time < 5000)
                 ImGui::Text("%s", latest_event.c_str());
             ImGui::End();
+            if (!game_started) {
+                ImGui::SetNextWindowPos(ImVec2(window_size / 2.0, 0));
+                ImGui::SetNextWindowSize(ImVec2(300, 80));
+                ImGui::Begin("Waiting for game to start", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings);
+                if (!is_ready && ImGui::Button("Ready to play?")) {
+                    std::vector<uint8_t> ready_msg {static_cast<uint8_t>(MessageToServerTypes::ReadyUp)};
+                    send_packet(server, ready_msg, channel_user_updates);
+                    is_ready = true;
+                } else if (is_ready) {
+                    ImGui::Text("Waiting for other players to be ready...");
+                    if (ImGui::Button("Unready")) {
+                        std::vector<uint8_t> not_ready_msg {static_cast<uint8_t>(MessageToServerTypes::UnReady)};
+                        send_packet(server, not_ready_msg, channel_user_updates);
+                        is_ready = false;
+                    }
+                }
+                ImGui::End();
+            }
         }
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
