@@ -47,3 +47,13 @@ if(WIN32)
         VERBATIM
     )
 endif()
+
+
+# Copy font folder
+add_custom_command(
+    TARGET Lastand-Client POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_CURRENT_SOURCE_DIR}/fonts
+            $<TARGET_FILE_DIR:Lastand-Client>/fonts
+)
+
