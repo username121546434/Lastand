@@ -74,9 +74,9 @@ std::ostream &operator<<(std::ostream &os, const ENetAddress &e) {
     return os;
 }
 
-void send_packet(ENetPeer *peer, const std::vector<uint8_t> &data, int channel_id) {
+void send_packet(ENetPeer *peer, const std::vector<uint8_t> &data, int channel_id, ENetPacketFlag flags = ENET_PACKET_FLAG_RELIABLE) {
     std::cout << "Sending packet: " << data << '\n';
-    ENetPacket *packet = enet_packet_create(data.data(), data.size(), ENET_PACKET_FLAG_RELIABLE);
+    ENetPacket *packet = enet_packet_create(data.data(), data.size(), flags);
     int val = enet_peer_send(peer, channel_id, packet);
     if (val != 0) {
         std::cerr << "Failed to send packet: " << val << " to: " << peer->address << std::endl;
@@ -84,9 +84,9 @@ void send_packet(ENetPeer *peer, const std::vector<uint8_t> &data, int channel_i
     }
 }
 
-void broadcast_packet(ENetHost *server, const std::vector<uint8_t> &data, int channel_id) {
+void broadcast_packet(ENetHost *server, const std::vector<uint8_t> &data, int channel_id, ENetPacketFlag flags = ENET_PACKET_FLAG_RELIABLE) {
     std::cout << "Broadcasting packet: " << data << '\n';
-    ENetPacket *packet = enet_packet_create(data.data(), data.size(), ENET_PACKET_FLAG_RELIABLE);
+    ENetPacket *packet = enet_packet_create(data.data(), data.size(), flags);
     enet_host_broadcast(server, channel_id, packet);
 }
 
@@ -463,7 +463,7 @@ int main(int argv, char **argc) {
             if (!players_to_update.empty()) {
                 std::vector<uint8_t> data_to_send {serialize_game_player_positions(players_to_update)};
                 data_to_send.insert(data_to_send.cbegin(), static_cast<uint8_t>(MessageToClientTypes::UpdatePlayerPositions));
-                broadcast_packet(server, data_to_send, channel_updates);
+                broadcast_packet(server, data_to_send, channel_updates, ENET_PACKET_FLAG_UNSEQUENCED);
             }
 
             if (!projectiles.empty() || !sent_empty_projectiles) {
@@ -476,7 +476,7 @@ int main(int argv, char **argc) {
                     auto p_data = serialize_projectile(p);
                     projectile_data.insert(projectile_data.end(), p_data.cbegin(), p_data.cend());
                 }
-                broadcast_packet(server, projectile_data, channel_updates);
+                broadcast_packet(server, projectile_data, channel_updates, ENET_PACKET_FLAG_UNSEQUENCED);
                 if (projectiles.empty())
                     sent_empty_projectiles = true;
                 else
