@@ -241,7 +241,7 @@ std::map<uint8_t, uint8_t> run_game_tick(std::map<int, ClientData> &players, con
                 }
                 return false;
         });
-        if (p.x > max_x + 100 || p.y > max_y + 100 || p.x < min_x - 100 || p.y < min_y - 100 || (hit_player) ||
+        if (p.x > max_x || p.y > max_y + player_size || p.x < min_x || p.y < min_y || (hit_player) ||
             std::any_of(obstacles.begin(), obstacles.end(), 
                         [p](Obstacle ob) { return point_in_rect(ob.x, ob.y, ob.width * 2, ob.height * 2, p.x, p.y); })
         ) {

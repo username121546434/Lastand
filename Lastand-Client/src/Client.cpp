@@ -476,6 +476,9 @@ int main(int argv, char **argc) {
         for (auto p : projectiles)
             draw_projectile(renderer, p);
 
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        SDL_RenderLine(renderer, 0, window_size, window_size, window_size);
+
         ImGui::Render();
         ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
 
