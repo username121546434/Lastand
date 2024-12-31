@@ -13,6 +13,7 @@
 #include "SDL3/SDL_video.h"
 #include "constants.h"
 #include <enet/enet.h>
+#include <sstream>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -162,12 +163,14 @@ std::vector<uint8_t> process_event(const SDL_Event &event, std::pair<short, shor
     }
 }
 
-void parse_message_from_server(const std::vector<uint8_t> &data, std::map<int, Player> &player_data, std::vector<Projectile> &projectiles) {
+std::string parse_message_from_server(const std::vector<uint8_t> &data, std::map<int, Player> &player_data, std::vector<Projectile> &projectiles) {
     MessageToClientTypes type {data[0]};
     std::vector<uint8_t> data_without_type {data.begin() + 1, data.end()};
     switch (type) {
         case MessageToClientTypes::UpdatePlayerPositions: {
-            std::cout << "update player positions" << std::endl;
+#ifdef DEBUG
+            std::cout << "update player positions" << '\n';
+#endif
             deserialize_and_update_game_player_positions(data_without_type, player_data);
             break;
         }
@@ -175,12 +178,15 @@ void parse_message_from_server(const std::vector<uint8_t> &data, std::map<int, P
             std::cout << "Player joined" << std::endl;
             Player p {deserialize_player(data_without_type)};
             player_data[p.id] = p;
+            return std::string("Player ") + p.username + " joined";
             break;
         }
         case MessageToClientTypes::PlayerLeft: {
             int id {data_without_type[0]};
             std::cout << "Player " << id << " left" << std::endl;
+            std::string username = player_data.at(id).username;
             player_data.erase(id);
+            return std::string("Player ") + username + " left";
             break;
         }
         case MessageToClientTypes::UpdateProjectiles: {
@@ -208,8 +214,11 @@ void parse_message_from_server(const std::vector<uint8_t> &data, std::map<int, P
             assert(data_without_type.size() == 2);
             uint8_t killer {data_without_type[0]};
             uint8_t killed {data_without_type[1]};
-            std::cout << player_data.at(killer).username << " has killed " << player_data.at(killed).username << std::endl;
+            std::stringstream ss;
+            ss << player_data.at(killer).username << " has killed " << player_data.at(killed).username;
+            std::cout << ss.str() << std::endl;
             player_data.erase(killed);
+            return ss.str();
             break;
         }
         case MessageToClientTypes::GameStarted: {
@@ -219,16 +228,19 @@ void parse_message_from_server(const std::vector<uint8_t> &data, std::map<int, P
         case MessageToClientTypes::SetPlayerAttributes: {
             SetPlayerAttributesTypes attribute_type = static_cast<SetPlayerAttributesTypes>(data_without_type[0]);
             auto player_id = data_without_type[1];
+            std::stringstream ss;
             std::cout << "Player set attribute: " << (int)player_id << " " << (int)attribute_type << std::endl;
             switch (attribute_type) {
                 case SetPlayerAttributesTypes::UsernameChanged: {
                     std::string username {data_without_type.begin() + 3, data_without_type.end()};
-                    std::cout << "Set username of " << (int)player_id << " to: " << username << '\n';
+                    std::cout << "Set username of " << (int)player_id << " to: " << username;
+                    ss << player_data.at(player_id).username << " has changed their username to " << username << std::endl;
                     player_data.at(player_id).username = username;
                     break;
                 }
                 case SetPlayerAttributesTypes::ColorChanged: {
                     Color c {data_without_type[2], data_without_type[3], data_without_type[4], data_without_type[5]};
+                    ss << player_data.at(player_id).username << " has changed their color";
                     player_data.at(player_id).color = c;
                     std::cout << "Set color of " << (int)player_id << " to: (" << (int)c.r << ", " << (int)c.g << ", " << (int)c.b << ", " << (int)c.a << ")\n";
                     break;
@@ -236,9 +248,11 @@ void parse_message_from_server(const std::vector<uint8_t> &data, std::map<int, P
                 default:
                     std::cerr << "Attribute type not recognized: " << (int)attribute_type << std::endl;
             }
+            return ss.str();
             break;
         }
     }
+    return "";
 }
 
 template <typename T>
@@ -382,6 +396,9 @@ int main(int argv, char **argc) {
     ImVec4 player_color {1.0f, 1.0f, 1.0f, 1.0f};
     char username[15] = "";
     bool connected_to_server = false;
+    
+    std::string latest_event;
+    auto latest_event_time = SDL_GetTicks();
 
     // the player the client is controlling
     Player local_player;
@@ -445,20 +462,28 @@ int main(int argv, char **argc) {
             ENetEvent enet_event;
             while (enet_host_service(client, &enet_event, tick_rate_ms) > 0) {
                 switch (enet_event.type) {
-                case ENET_EVENT_TYPE_RECEIVE: {
-                    std::vector<uint8_t> data;
-                    for (int i{0}; i < enet_event.packet->dataLength; i++)
-                        data.push_back(enet_event.packet->data[i]);
-                    std::cout << "Received data: " << data << " on channel: " << (int)enet_event.channelID << '\n';
-                    parse_message_from_server(data, players, projectiles);
-                    break;
-                }
-                default:
-                    break;
+                    case ENET_EVENT_TYPE_RECEIVE: {
+                        std::vector<uint8_t> data;
+                        for (int i{0}; i < enet_event.packet->dataLength; i++)
+                            data.push_back(enet_event.packet->data[i]);
+                        std::cout << "Received data: " << data << " on channel: " << (int)enet_event.channelID << '\n';
+                        std::string new_event = parse_message_from_server(data, players, projectiles);
+                        if (new_event != "") {
+                            latest_event = new_event;
+                            latest_event_time = SDL_GetTicks();
+                        }
+                        break;
+                    }
+                    default:
+                        break;
                 }
             }
-            ImGui::Begin("Game");
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+            ImGui::Begin("Game", nullptr, ImGuiWindowFlags_NoCollapse);
+            ImGui::Text("Frame time: %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+            ImGui::End();
+            ImGui::Begin("Events", nullptr, ImGuiWindowFlags_NoCollapse);
+            if (SDL_GetTicks() - latest_event_time < 5000)
+                ImGui::Text("%s", latest_event.c_str());
             ImGui::End();
         }
 
