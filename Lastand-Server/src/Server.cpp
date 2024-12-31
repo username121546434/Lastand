@@ -33,6 +33,9 @@ constexpr uint16_t min_y {0};
 constexpr uint16_t max_x {(window_size - player_size) * 2};
 constexpr uint16_t max_y {(window_size - player_size) * 2};
 
+// the maximum distance a projectile can travel in pixels
+constexpr uint16_t max_obstacle_distance_travelled {500};
+
 struct ClientData {
     Player p;
     std::pair<short, short> player_movement;
@@ -45,13 +48,17 @@ struct ProjectileDouble {
     double dx;
     double dy;
     uint8_t player_id;
+    uint16_t start_x;
+    uint16_t start_y;
 
     ProjectileDouble(Projectile p, uint8_t player_id)
-        : x {static_cast<double>(p.x)}, y {static_cast<double>(p.y)},
-          dx {p.dx / std::sqrt(std::pow(p.dx, 2) + std::pow(p.dy, 2))},
-          dy {std::sqrt(1 - dx * dx) * (p.dy < 0 ? -1 : 1)},
-          player_id {player_id} {}
-    
+        : x{static_cast<double>(p.x)}, y{static_cast<double>(p.y)},
+          dx{p.dx / std::sqrt(std::pow(p.dx, 2) + std::pow(p.dy, 2))},
+          dy{std::sqrt(1 - dx * dx) * (p.dy < 0 ? -1 : 1)},
+          player_id{player_id},
+          start_x{p.x}, start_y{p.y}
+    {}
+
     void move(uint8_t times = 1) {
         for (uint8_t i = 0; i < times; i++) {
             x += dx;
@@ -241,7 +248,8 @@ std::map<uint8_t, uint8_t> run_game_tick(std::map<int, ClientData> &players, con
                 }
                 return false;
         });
-        if (p.x > max_x || p.y > max_y + player_size || p.x < min_x || p.y < min_y || (hit_player) ||
+        double distance_travelled = std::sqrt(std::pow(p.x - p.start_x, 2) + std::pow(p.y - p.start_y, 2));
+        if (p.x > max_x || p.y > max_y + player_size || p.x < min_x || p.y < min_y || (hit_player) || distance_travelled >= max_obstacle_distance_travelled ||
             std::any_of(obstacles.begin(), obstacles.end(), 
                         [p](Obstacle ob) { return point_in_rect(ob.x, ob.y, ob.width * 2, ob.height * 2, p.x, p.y); })
         ) {
