@@ -1,4 +1,4 @@
-#include "obstacle.h"
+#include "Obstacle.h"
 #include "Player.h"
 #include "serialize.h"
 
