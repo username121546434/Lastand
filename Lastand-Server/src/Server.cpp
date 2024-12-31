@@ -234,7 +234,7 @@ std::map<uint8_t, uint8_t> run_game_tick(std::map<int, ClientData> &players, con
             players.begin(), players.end(),
             [p, &player_that_got_hit](const std::pair<uint8_t, ClientData> &data) {
                 if (point_in_rect(data.second.p.x, data.second.p.y, player_size * 2, player_size * 2, p.x, p.y) &&
-                    player_that_got_hit.id != p.player_id)
+                    data.second.p.id != p.player_id)
                 {
                     player_that_got_hit = data.second.p;
                     return true;

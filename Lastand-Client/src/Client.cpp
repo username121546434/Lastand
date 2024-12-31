@@ -195,14 +195,16 @@ void parse_message_from_server(const std::vector<uint8_t> &data, std::map<int, P
             uint8_t killed {data_without_type[1]};
             std::cout << player_data.at(killer).username << " has killed " << player_data.at(killed).username << std::endl;
             player_data.erase(killed);
+            break;
         }
         case MessageToClientTypes::GameStarted: {
             std::cout << "The game has started!" << std::endl;
+            break;
         }
         case MessageToClientTypes::SetPlayerAttributes: {
             SetPlayerAttributesTypes attribute_type = static_cast<SetPlayerAttributesTypes>(data_without_type[0]);
             auto player_id = data_without_type[1];
-            std::cout << "Player " << (int)player_id << " " << (int)attribute_type << std::endl;
+            std::cout << "Player set attribute: " << (int)player_id << " " << (int)attribute_type << std::endl;
             switch (attribute_type) {
                 case SetPlayerAttributesTypes::UsernameChanged: {
                     std::string username {data_without_type.begin() + 3, data_without_type.end()};
@@ -219,6 +221,7 @@ void parse_message_from_server(const std::vector<uint8_t> &data, std::map<int, P
                 default:
                     std::cerr << "Attribute type not recognized: " << (int)attribute_type << std::endl;
             }
+            break;
         }
     }
 }
@@ -397,9 +400,6 @@ int main(int argv, char **argc) {
             ImGui::InputTextWithHint("Input server address", "Enter server address", &server_addr);
             ImGui::InputInt("Input server port", &port);
 
-            std::cout << "Username: " << username << std::endl;
-            std::cout << "Server address: " << server_addr << std::endl;
-            std::cout << "Port: " << port << std::endl;
             if (ImGui::Button("Connect to the server")) {
                 connected_to_server = true;
                 std::tie(local_player, players, obstacles, server) = connect_to_server(client, server_addr, port);
