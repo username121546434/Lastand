@@ -317,6 +317,7 @@ int main(int argv, char **argc) {
     std::cout << "Loaded " << obstacles.size() << " obstacles" << std::endl;
     // whether the server should send a list of empty projectiles
     bool sent_empty_projectiles = false;
+    bool player_won = false;
 
 #if defined(DEBUG)
     for (const auto &o : obstacles) {
@@ -328,7 +329,6 @@ int main(int argv, char **argc) {
 #endif
 
     auto last_time = std::chrono::high_resolution_clock::now();
-    auto start_time = last_time;
 
     while (running) {
         int err = enet_host_service(server, &event, tick_rate_ms);
@@ -481,6 +481,11 @@ int main(int argv, char **argc) {
                     sent_empty_projectiles = true;
                 else
                     sent_empty_projectiles = false;
+            }
+            if (game_started && players.size() == 1 && !player_won) {
+                std::cout << "The game has ended!" << std::endl;
+                broadcast_packet(server, {static_cast<uint8_t>(MessageToClientTypes::PlayerWon), players.begin()->second.p.id}, channel_events);
+                player_won = true;
             }
         }
     }

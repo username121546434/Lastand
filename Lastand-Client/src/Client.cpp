@@ -252,6 +252,15 @@ std::string parse_message_from_server(const std::vector<uint8_t> &data, std::map
             return ss.str();
             break;
         }
+        case MessageToClientTypes::PlayerWon: {
+            assert(data_without_type.size() == 1);
+            std::cout << "Player " << (int)data_without_type[0] << " has won!" << std::endl;
+            std::string text = "Player " + std::to_string(data_without_type[0]) + " has won!";
+            return text;
+            break;
+        }
+        case MessageToClientTypes::PreviousGameData:
+            break; // previous game data is handled in connect_to_server() function
     }
     return "";
 }
@@ -399,6 +408,7 @@ int main(int argv, char **argc) {
     bool connected_to_server = false;
     bool game_started = false;
     bool is_ready = false;
+    std::pair<bool, std::string> player_won {false, ""};
     
     std::string latest_event;
     auto latest_event_time = SDL_GetTicks();
@@ -432,7 +442,7 @@ int main(int argv, char **argc) {
         ImGui::NewFrame();
 
         if (!connected_to_server) {
-            ImGui::Begin("Enter your details");
+            ImGui::Begin("Enter your details", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
             ImGui::ColorEdit4("Choose your color", (float*)&player_color);
             ImGui::InputTextWithHint("Username", "Enter username", username, 15);
             ImGui::InputTextWithHint("Input server address", "Enter server address", &server_addr);
@@ -477,16 +487,19 @@ int main(int argv, char **argc) {
                         }
                         if (new_event == "The game has started!")
                             game_started = true;
+                        if (data[0] == (uint8_t)MessageToClientTypes::PlayerWon) {
+                            player_won = {true, players.at(data[1]).username};
+                        }
                         break;
                     }
                     default:
                         break;
                 }
             }
-            ImGui::Begin("Game", nullptr, ImGuiWindowFlags_NoCollapse);
+            ImGui::Begin("Game", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
             ImGui::Text("Frame time: %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
             ImGui::End();
-            ImGui::Begin("Events", nullptr, ImGuiWindowFlags_NoCollapse);
+            ImGui::Begin("Events", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
             if (SDL_GetTicks() - latest_event_time < 5000)
                 ImGui::Text("%s", latest_event.c_str());
             ImGui::End();
@@ -506,6 +519,10 @@ int main(int argv, char **argc) {
                         is_ready = false;
                     }
                 }
+                ImGui::End();
+            } else if (player_won.first) {
+                ImGui::Begin("#1 Victory Royale", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+                ImGui::Text("%s won!", player_won.second.c_str());
                 ImGui::End();
             }
         }
