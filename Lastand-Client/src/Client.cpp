@@ -40,14 +40,14 @@ struct Particle {
 };
 
 template <size_t N>
-std::array<Particle, N> create_particles(int start_x, int start_y) {
+std::array<Particle, N> create_particles(int start_x, int start_y, float life = -1) {
     std::array<Particle, N> particles;
     for (auto &p : particles) {
         p.x = start_x;
         p.y = start_y;
         p.dx = SDL_rand(6) - 3;
         p.dy = SDL_rand(6) - 3;
-        p.life_left = SDL_rand(15) + 5;
+        p.life_left = life == -1 ? SDL_rand(15) + 5 : life;
         p.color = {static_cast<Uint8>(SDL_rand(155) + 100), static_cast<Uint8>(SDL_rand(155) + 30), 0, 255};
     }
     return particles;
@@ -543,6 +543,18 @@ int main(int argv, char **argc) {
                             game_started = true;
                         if (data[0] == (uint8_t)MessageToClientTypes::PlayerWon) {
                             player_won = {true, players.at(data[1]).username};
+
+                            // add a lot of explosions (otherwise known as particles)
+                            auto new_particles = create_particles<10>(players.at(data[1]).x / 2 + player_size, players.at(data[1]).y / 2 + player_size, 100);
+                            particles.insert(particles.end(), new_particles.begin(), new_particles.end());
+                            new_particles = create_particles<10>(0, 0, 50);
+                            particles.insert(particles.end(), new_particles.begin(), new_particles.end());
+                            new_particles = create_particles<10>(window_size, window_size, 50);
+                            particles.insert(particles.end(), new_particles.begin(), new_particles.end());
+                            new_particles = create_particles<10>(window_size, 0, 50);
+                            particles.insert(particles.end(), new_particles.begin(), new_particles.end());
+                            new_particles = create_particles<10>(0, window_size, 50);
+                            particles.insert(particles.end(), new_particles.begin(), new_particles.end());
                         }
                         break;
                     }
