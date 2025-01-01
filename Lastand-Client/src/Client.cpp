@@ -26,6 +26,52 @@
 
 const uint16_t window_height {window_size + 100};
 
+struct Particle {
+    float x, y;
+    float dx, dy;
+    float life_left;
+    SDL_Color color;
+
+    void update() {
+        x += dx;
+        y += dy;
+        life_left -= 0.2;
+    }
+};
+
+template <size_t N>
+std::array<Particle, N> create_particles(int start_x, int start_y) {
+    std::array<Particle, N> particles;
+    for (auto &p : particles) {
+        p.x = start_x;
+        p.y = start_y;
+        p.dx = SDL_rand(6) - 3;
+        p.dy = SDL_rand(6) - 3;
+        p.life_left = SDL_rand(15) + 5;
+        p.color = {static_cast<Uint8>(SDL_rand(155) + 100), static_cast<Uint8>(SDL_rand(155) + 30), 0, 255};
+    }
+    return particles;
+}
+
+void update_particles(std::vector<Particle> &particles) {
+    for (auto p = particles.begin(); p != particles.end(); ++p) {
+        p->update();
+        if (p->life_left <= 0) {
+            particles.erase(p);
+            p--;
+        }
+    }
+}
+
+void draw_particles(SDL_Renderer *renderer, const std::vector<Particle> &particles) {
+    for (const auto &p : particles) {
+        SDL_FRect frect {p.x, p.y, 3.0, 3.0};
+        SDL_SetRenderDrawColor(renderer, p.color.r, p.color.g, p.color.b, p.color.a);
+        SDL_RenderFillRect(renderer, &frect);
+    }
+}
+
+
 void draw_player(SDL_Renderer *renderer, const Player &p) {
     SDL_FRect frect {static_cast<float>(p.x / 2.0), static_cast<float>(p.y / 2.0), player_size, player_size};
     bool success;
@@ -163,7 +209,7 @@ std::vector<uint8_t> process_event(const SDL_Event &event, std::pair<short, shor
     }
 }
 
-std::string parse_message_from_server(const std::vector<uint8_t> &data, std::map<int, Player> &player_data, std::vector<Projectile> &projectiles) {
+std::string parse_message_from_server(const std::vector<uint8_t> &data, std::map<int, Player> &player_data, std::vector<Projectile> &projectiles, std::vector<Particle> &particles) {
     MessageToClientTypes type {data[0]};
     std::vector<uint8_t> data_without_type {data.begin() + 1, data.end()};
     switch (type) {
@@ -217,6 +263,13 @@ std::string parse_message_from_server(const std::vector<uint8_t> &data, std::map
             std::stringstream ss;
             ss << player_data.at(killer).username << " has killed " << player_data.at(killed).username;
             std::cout << ss.str() << std::endl;
+
+            // add particles
+            int start_x = player_data.at(killed).x / 2 + player_size;
+            int start_y = player_data.at(killed).y / 2 + player_size;
+            auto new_particles = create_particles<15>(start_x, start_y);
+            particles.insert(particles.end(), new_particles.begin(), new_particles.end());
+
             player_data.erase(killed);
             return ss.str();
             break;
@@ -402,6 +455,7 @@ int main(int argv, char **argc) {
 
     std::pair<short, short> player_movement;
     std::vector<Projectile> projectiles;
+    std::vector<Particle> particles;
     auto last_time = SDL_GetTicks();
     ImVec4 player_color {1.0f, 1.0f, 1.0f, 1.0f};
     char username[15] = "";
@@ -480,7 +534,7 @@ int main(int argv, char **argc) {
                         for (int i{0}; i < enet_event.packet->dataLength; i++)
                             data.push_back(enet_event.packet->data[i]);
                         std::cout << "Received data: " << data << " on channel: " << (int)enet_event.channelID << '\n';
-                        std::string new_event = parse_message_from_server(data, players, projectiles);
+                        std::string new_event = parse_message_from_server(data, players, projectiles, particles);
                         if (new_event != "") {
                             latest_event = new_event;
                             latest_event_time = SDL_GetTicks();
@@ -540,6 +594,9 @@ int main(int argv, char **argc) {
 
         for (auto p : projectiles)
             draw_projectile(renderer, p);
+
+        update_particles(particles);
+        draw_particles(renderer, particles);
 
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
         SDL_RenderLine(renderer, 0, window_size, window_size, window_size);
