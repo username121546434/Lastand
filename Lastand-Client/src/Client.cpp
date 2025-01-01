@@ -108,7 +108,6 @@ void draw_obstacle(SDL_Renderer *renderer, const Obstacle &o) {
         static_cast<float>(o.width),
         static_cast<float>(o.height)
     };
-    // std::cout << "Drawing obstacle at: (" << o.x << ", " << o.y << ") (" << o.width << ", " << o.height << ")" << std::endl;
     bool success = SDL_SetRenderDrawColor(renderer, o.color.r, o.color.g, o.color.b, o.color.a);
     if (!success) std::cerr << "Error in SDL_SetRenderDrawColor: " << SDL_GetError();
     success = SDL_RenderFillRect(renderer, &frect);
