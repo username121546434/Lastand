@@ -111,7 +111,7 @@ void draw_projectile(SDL_Renderer *renderer, const Projectile &p) {
     SDL_FRect frect {
         static_cast<float>(p.x / 2.0),
         static_cast<float>(p.y / 2.0),
-        2.0, 2.0
+        3.0, 3.0
     };
     bool success = SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
     if (!success) std::cerr << "Error in SDL_SetRenderDrawColor: " << SDL_GetError();
