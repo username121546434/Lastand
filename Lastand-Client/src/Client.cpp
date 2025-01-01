@@ -9,6 +9,7 @@
 #include <SDL3/SDL_main.h>
 #include "Projectile.h"
 #include "SDL3/SDL_events.h"
+#include "SDL3/SDL_render.h"
 #include "SDL3/SDL_timer.h"
 #include "SDL3/SDL_video.h"
 #include "constants.h"
@@ -74,7 +75,14 @@ void draw_particles(SDL_Renderer *renderer, const std::vector<Particle> &particl
 
 void draw_player(SDL_Renderer *renderer, const Player &p) {
     SDL_FRect frect {static_cast<float>(p.x / 2.0), static_cast<float>(p.y / 2.0), player_size, player_size};
+    SDL_FRect shadow_frect {frect.x + 3, frect.y + 3, frect.w, frect.h};
     bool success;
+
+    success = SDL_SetRenderDrawColor(renderer, p.color.r, p.color.g, p.color.b, 100);
+    if (!success) std::cerr << "Error in SDL_SetRenderDrawColor: " << SDL_GetError();
+    success = SDL_RenderFillRect(renderer, &shadow_frect);
+    if (!success) std::cerr << "Error in SDL_RenderFillRect: " << SDL_GetError();
+
     success = SDL_SetRenderDrawColor(renderer, p.color.r, p.color.g, p.color.b, p.color.a);
     if (!success) std::cerr << "Error in SDL_SetRenderDrawColor: " << SDL_GetError();
     success = SDL_RenderFillRect(renderer, &frect);
@@ -475,6 +483,9 @@ int main(int argv, char **argc) {
 
     bool running = true;
     SDL_Event event;
+
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
     while (running) {
         while (SDL_PollEvent(&event)) {
             ImGui_ImplSDL3_ProcessEvent(&event);
