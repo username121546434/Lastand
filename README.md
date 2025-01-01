@@ -10,7 +10,7 @@ A very basic 2D multiplayer battle royale game made using SDL3, ENet, and Dear I
 - Works on linux
 
 
-## Demo
+## Demo (please watch in fullscreen)
 
 
 
